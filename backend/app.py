@@ -3,6 +3,7 @@ import uuid
 import logging
 import time
 import json
+import threading
 from typing import Optional, Dict, Any, List, Union
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
@@ -308,6 +309,29 @@ def health_check():
 # Observability state for reasoning pipeline
 _latest_reasoning_result: Optional[Dict[str, Any]] = None
 
+# In-memory thread-safe deduplication store for Omi webhook idempotency
+_events_lock = threading.Lock()
+_processed_omi_events: Dict[str, Dict[str, Any]] = {}
+_MAX_PROCESSED_EVENTS = 2000
+
+
+def is_event_processed(uid: str, conversation_id: str) -> bool:
+    """Check if an event has already been processed for this UID."""
+    with _events_lock:
+        return f"{uid}:{conversation_id}" in _processed_omi_events
+
+
+def get_event_record(uid: str, conversation_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieve the deduplication record for this UID and conversation ID."""
+    with _events_lock:
+        return _processed_omi_events.get(f"{uid}:{conversation_id}")
+
+
+def reset_processed_events():
+    """Clear all processed event records (used for test isolation)."""
+    with _events_lock:
+        _processed_omi_events.clear()
+
 
 def is_explicit_question(text: str) -> bool:
     """
@@ -373,7 +397,11 @@ def process_reasoning_pipeline(
         "retrieved_memory_count": 0,
         "retrieved_memory_ids": [],
         "lyzr_answer": None,
+        "notification_status": "pending",
+        "notification_error": None,
+        "notification_status_code": None,
         "processing_status": "in_progress",
+        "event_status": "processed",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "error": None,
     }
@@ -404,10 +432,27 @@ def process_reasoning_pipeline(
         result["processing_status"] = "completed"
         logger.info(f"[Reasoning Pipeline] Lyzr Answer: {result['lyzr_answer']}")
 
+        # Step 3: Send Lyzr answer back to user via Omi Notifications API
+        if result["lyzr_answer"] and result["lyzr_answer"].strip():
+            from omi_service import send_omi_notification
+            result["notification_status"] = "attempted"
+            noti_res = send_omi_notification(
+                uid=uid,
+                message=result["lyzr_answer"],
+            )
+            result["notification_status"] = noti_res.get("status", "failed")
+            result["notification_error"] = noti_res.get("error")
+            result["notification_status_code"] = noti_res.get("status_code")
+        else:
+            result["notification_status"] = "skipped"
+            result["notification_error"] = "Empty Lyzr answer; notification skipped."
+
     except Exception as e:
         logger.error(f"[Reasoning Pipeline] Execution error: {type(e).__name__}: {str(e)}")
         result["processing_status"] = "error"
         result["error"] = f"{type(e).__name__}: {str(e)}"
+        result["notification_status"] = "skipped"
+        result["notification_error"] = "Lyzr reasoning failed; notification skipped."
 
     _latest_reasoning_result = result
 
@@ -467,7 +512,31 @@ def on_conversation(
     if not isinstance(payload, dict):
         payload = {}
 
-    effective_session_id = session_id or payload.get("session_id") or payload.get("id") or None
+    conversation_id = payload.get("id") or payload.get("session_id") or session_id or None
+    if conversation_id and isinstance(conversation_id, str):
+        conversation_id = conversation_id.strip()
+
+    # Idempotency guard: Prevent duplicate execution if the same conversation event is received multiple times
+    if conversation_id:
+        dedup_key = f"{effective_uid}:{conversation_id}"
+        with _events_lock:
+            if dedup_key in _processed_omi_events:
+                logger.info(
+                    f"[Omi Webhook Idempotency] Duplicate conversation event skipped: "
+                    f"uid='{effective_uid}', conversation_id='{conversation_id}' (event_status='duplicate_skipped')"
+                )
+                return {"status": "ok", "event_status": "duplicate_skipped"}
+            _processed_omi_events[dedup_key] = {
+                "uid": effective_uid,
+                "conversation_id": conversation_id,
+                "processed_at": datetime.now(timezone.utc).isoformat(),
+                "event_status": "processed",
+            }
+            if len(_processed_omi_events) > _MAX_PROCESSED_EVENTS:
+                oldest_key = next(iter(_processed_omi_events))
+                del _processed_omi_events[oldest_key]
+
+    effective_session_id = conversation_id or session_id or None
 
     segments = payload.get("transcript_segments") or payload.get("segments") or []
     transcript = " ".join(
@@ -534,6 +603,16 @@ def on_conversation(
         logger.warning(f"[Omi Webhook] No non-empty text found in conversation payload for uid='{effective_uid}'")
 
     return {"status": "ok"}
+
+
+@app.get("/omi/events/{conversation_id}", tags=["Omi"])
+def get_event_status_endpoint(conversation_id: str, uid: Optional[str] = None):
+    """Inspects the idempotency processing status of a specific Omi conversation event."""
+    effective_uid = uid or "omi_user"
+    record = get_event_record(effective_uid, conversation_id)
+    if record:
+        return {"status": "ok", "event_status": record.get("event_status", "processed"), "record": record}
+    return {"status": "not_found", "event_status": "not_seen"}
 
 
 @app.post("/omi/realtime", tags=["Omi"])

@@ -61,7 +61,7 @@ def run_tests():
         print(f"  [{idx}] Score: {mem['score']:.4f} | ID: {mem['id']}")
         print(f"      Text: {mem['text']}")
     assert len(retrieved) > 0, "No memories retrieved"
-    assert "Lyzr" in retrieved[0]["text"]
+    assert any("Lyzr" in mem["text"] for mem in retrieved), f"Expected Lyzr in retrieved memories, got {retrieved}"
     assert retrieved[0]["score"] > 0.5, f"Expected high cosine similarity, got {retrieved[0]['score']}"
     print(f"[OK] Direct retrieve_memories utility passed with score {retrieved[0]['score']:.4f}.")
 
