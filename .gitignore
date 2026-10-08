@@ -38,3 +38,7 @@ Thumbs.db
 
 # Organizer Material
 Hackathon-Submission-Guide.pdf
+
+# Runtime debug artifacts
+latest_omi_payload.json
+latest_reasoning_result.json

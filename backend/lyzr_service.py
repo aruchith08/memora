@@ -12,6 +12,7 @@ from typing import Optional, List, Union, Dict, Any
 import requests
 from dotenv import load_dotenv
 
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 load_dotenv()
 
 logger = logging.getLogger("memora-lyzr")
@@ -38,6 +39,28 @@ def get_lyzr_config() -> Dict[str, str]:
         "agent_id": agent_id,
         "api_url": api_url,
     }
+
+
+def get_lyzr_manager_config() -> Dict[str, str]:
+    """
+    Validate and return Lyzr Manager configuration from environment variables.
+    Raises ValueError if required configurations are missing.
+    """
+    api_key = os.getenv("LYZR_API_KEY", "").strip()
+    manager_agent_id = os.getenv("LYZR_MANAGER_AGENT_ID", "").strip()
+    api_url = os.getenv("LYZR_API_URL", DEFAULT_LYZR_URL).strip() or DEFAULT_LYZR_URL
+
+    if not api_key:
+        raise ValueError("LYZR_API_KEY is not configured in environment variables.")
+    if not manager_agent_id:
+        raise ValueError("LYZR_MANAGER_AGENT_ID is not configured in environment variables.")
+
+    return {
+        "api_key": api_key,
+        "manager_agent_id": manager_agent_id,
+        "api_url": api_url,
+    }
+
 
 
 def format_reasoning_prompt(question: str, context: Optional[Union[List[str], str]] = None) -> str:
@@ -163,3 +186,115 @@ def ask_lyzr(
         "agent_id": config["agent_id"],
         "user_id": effective_user_id,
     }
+
+
+def call_lyzr_manager(
+    question: str,
+    context: Optional[Union[List[str], str]] = None,
+    user_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    timeout: float = 30.0,
+) -> Dict[str, Any]:
+    """
+    Sends question and retrieved memory context to the configured Lyzr Manager Agent.
+    The Manager Agent orchestrates configured worker agents (e.g. MEMORA Reasoner and MEMORA Action Planner)
+    via Lyzr's managed_agents capability in Lyzr Agent Studio.
+    Returns structured answer dict without ever exposing secrets.
+    """
+    config = get_lyzr_manager_config()
+
+    if not question or not question.strip():
+        raise ValueError("Question cannot be empty.")
+
+    effective_user_id = (user_id or os.getenv("LYZR_USER_ID", "default_user")).strip()
+    effective_session_id = (
+        session_id
+        or os.getenv("LYZR_DEFAULT_SESSION_ID")
+        or f"{config['manager_agent_id']}-{uuid.uuid4().hex[:8]}"
+    ).strip()
+
+    prompt_message = format_reasoning_prompt(question=question, context=context)
+
+    payload = {
+        "user_id": effective_user_id,
+        "agent_id": config["manager_agent_id"],
+        "session_id": effective_session_id,
+        "message": prompt_message,
+    }
+
+    # Headers containing API key - NEVER log headers
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": config["api_key"],
+    }
+
+    logger.info(
+        f"Dispatching query to Lyzr Manager Agent [{config['manager_agent_id']}] (user='{effective_user_id}', "
+        f"session='{effective_session_id}', context_items={len(context) if isinstance(context, list) else 1})"
+    )
+
+    # Start non-blocking telemetry listener before inference request
+    collector = None
+    try:
+        from lyzr_telemetry import TelemetryCollector
+        c = TelemetryCollector(
+            session_id=effective_session_id,
+            api_key=config["api_key"],
+        )
+        c.start()
+        collector = c
+    except Exception as tel_init_err:
+        logger.warning(f"Telemetry collector initialization skipped: {tel_init_err}")
+
+    telemetry_data = {
+        "telemetry_status": "unavailable",
+        "delegation_observed": False,
+        "workers_invoked": [],
+        "execution_trace": [],
+    }
+
+    try:
+        response = requests.post(
+            config["api_url"],
+            headers=headers,
+            json=payload,
+            timeout=timeout,
+        )
+    except requests.Timeout:
+        if collector:
+            collector.stop(wait_seconds=0.5)
+        logger.error("Lyzr Manager API request timed out.")
+        raise RuntimeError("Lyzr inference request timed out.")
+    except requests.RequestException as e:
+        if collector:
+            collector.stop(wait_seconds=0.5)
+        logger.error(f"Lyzr Manager network error: {type(e).__name__}")
+        raise RuntimeError(f"Lyzr network communication error: {type(e).__name__}")
+
+    # Stop telemetry listener and harvest trace frames
+    if collector:
+        try:
+            telemetry_data = collector.stop(wait_seconds=2.0)
+        except Exception as tel_stop_err:
+            logger.warning(f"Failed to harvest telemetry: {tel_stop_err}")
+
+    if response.status_code != 200:
+        logger.error(f"Lyzr Manager API returned non-200 status code: {response.status_code}")
+        raise RuntimeError(f"Lyzr API error: HTTP {response.status_code}")
+
+    try:
+        data = response.json()
+    except Exception:
+        data = {"response": response.text}
+
+    answer = parse_lyzr_response(data)
+
+    return {
+        "answer": answer,
+        "session_id": effective_session_id,
+        "manager_agent_id": config["manager_agent_id"],
+        "user_id": effective_user_id,
+        "raw_response": data,
+        "telemetry": telemetry_data,
+    }
+
