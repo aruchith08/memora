@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+env/
+venv/
+.venv/
+ENV/
+
+# Qdrant data
+**/qdrant_storage/
+
+# Environment files
+**/.env
+**/.env.local
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+.next/
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Organizer Material
+Hackathon-Submission-Guide.pdf
