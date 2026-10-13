@@ -950,6 +950,8 @@ def verify_admin_access(auth_header: Optional[str] = None, admin_key: Optional[s
 
 
 @app.post("/omi/conversation", tags=["Omi"])
+@app.post("/ni/conversation", tags=["Omi"], include_in_schema=False)
+@app.post("/conversation", tags=["Omi"], include_in_schema=False)
 def on_conversation(
     background_tasks: BackgroundTasks,
     request: Request,
@@ -1128,6 +1130,8 @@ def get_event_status_endpoint(conversation_id: str, uid: Optional[str] = None):
 
 
 @app.post("/omi/realtime", tags=["Omi"])
+@app.post("/ni/realtime", tags=["Omi"], include_in_schema=False)
+@app.post("/realtime", tags=["Omi"], include_in_schema=False)
 def on_realtime(
     background_tasks: BackgroundTasks,
     request: Request,
