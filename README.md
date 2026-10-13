@@ -30,17 +30,7 @@ MEMORA creates an autonomous, privacy-conscious memory loop:
 
 ---
 
-## 2. Official Hackathon Track
-
-- **Hackathon**: *The Dawn of the Autonomous AI Builder — Stop Prompting, Solo Agents Hackathon 2026*
-- **Organizers**: AI House × HiDevs
-- **Selected Build Track**: **Collaborative Multi-Agent Workflows**
-  *(Voice-triggered pipelines where specialized agents coordinate through a shared vector memory layer)*
-- **Secondary Alignment**: **Privacy-First Knowledge Systems** *(Granular user isolation, fail-closed admin controls, and verified record deletion)*
-
----
-
-## 3. Live Deployments & Repository
+## 2. Live Deployments & Repository
 
 | Component | Target / Environment | URL |
 | :--- | :--- | :--- |
@@ -48,12 +38,11 @@ MEMORA creates an autonomous, privacy-conscious memory loop:
 | **Public Landing Page** | Vercel SPA | [https://memora-arh.vercel.app](https://memora-arh.vercel.app) |
 | **Backend Web Service** | Vercel Serverless Functions (Python ASGI) | [https://memora-1iae.vercel.app](https://memora-1iae.vercel.app) |
 | **Backend Health Check** | FastAPI `/health` | [https://memora-1iae.vercel.app/health](https://memora-1iae.vercel.app/health) |
-| **Source Code** | Public GitHub Repository | [https://github.com/aruchith08/memora](https://github.com/aruchith08/memora) |
-| **Demo Video** | Video Walkthrough (Under 5 mins) | *[MEMORA Demo Video Link Placeholder]* |
+| **Source Code** | GitHub Repository | [https://github.com/aruchith08/memora](https://github.com/aruchith08/memora) |
 
 ---
 
-## 4. End-to-End System Architecture
+## 3. End-to-End System Architecture
 
 ```mermaid
 flowchart TD
@@ -89,7 +78,7 @@ flowchart TD
 
 ---
 
-## 5. Technology Stack & Component Roles
+## 4. Technology Stack & Component Roles
 
 ### **Omi (Ambient Voice & Conversation Ingestion)**
 Omi serves as the voice interface. Transcripts from live physical conversations and streaming chunks are ingested through authenticated webhook endpoints (`POST /omi/conversation`, `POST /omi/realtime`). The backend enforces query-param and header-based secret verification (`OMI_WEBHOOK_SECRET`) to ensure payloads originate exclusively from trusted hardware. Inbound events are deduplicated with an in-memory lock to guarantee idempotent processing. Outbound notification capabilities are integrated to relay synthesized plans back to the wearable screen.
@@ -111,7 +100,7 @@ Lyzr powers the autonomous intelligence engine. Rather than relying on simple si
 
 ---
 
-## 6. Complete API Reference
+## 5. Complete API Reference
 
 All routes are implemented and validated:
 
@@ -130,7 +119,7 @@ All routes are implemented and validated:
 
 ---
 
-## 7. Security, Privacy & Memory Deletion
+## 6. Security, Privacy & Memory Deletion
 
 - **Zero Secret Exposure**: All credentials (`QDRANT_API_KEY`, `LYZR_API_KEY`, `OMI_WEBHOOK_SECRET`, `MEMORA_ADMIN_KEY`) are managed via environment variables and excluded from version control.
 - **Fail-Closed Administrative Gate**: Mutations (`POST /memories`, `DELETE /memories/{id}`, `POST /reason`) fail closed with `401 Unauthorized` in production if `MEMORA_ADMIN_KEY` is not provided.
@@ -140,7 +129,7 @@ All routes are implemented and validated:
 
 ---
 
-## 8. Environment Configuration & Deployment
+## 7. Environment Configuration & Deployment
 
 ### Environment Variables Reference
 
@@ -238,7 +227,7 @@ npm run dev
 
 ---
 
-## 9. Test Results & Verification
+## 8. Test Results & Verification
 
 All automated test suites pass cleanly:
 
@@ -255,29 +244,3 @@ uv run --directory backend -m unittest test_collaborative_workflow.py test_lyzr_
 npm --prefix frontend run build
 # Result: 1,620 modules transformed into dist/ — 0 type errors
 ```
-
----
-
-## 10. Demo Video Plan (3–4 Minutes)
-
-- **Video Filename**: `MEMORA_Hackathon_Demo.mp4`
-- **Recommended Length**: 3 minutes 30 seconds
-- **Structure**:
-  1. **0:00–0:25**: Introduction to MEMORA, the problem of memory decay, and the solution.
-  2. **0:25–1:00**: Architecture walkthrough (Omi voice capture → Qdrant vector memory → Lyzr collaborative agents).
-  3. **1:00–1:40**: Live Dashboard overview ([memora-arh.vercel.app/app](https://memora-arh.vercel.app/app)) showing connected backend and the 5 indexed demo memories.
-  4. **1:40–2:20**: Live semantic search demonstration querying *"What should I prepare for my MSF class?"* (MSF class memory ranks #1 with ~78% relevance).
-  5. **2:20–3:00**: Memory deletion & privacy control demo (forgetting a memory with permanent Qdrant removal).
-  6. **3:00–3:30**: Conclusion, live URLs, and GitHub repository.
-
----
-
-## 11. Submission Metadata
-
-- **Project Name**: MEMORA
-- **Project Title**: MEMORA — Voice-Powered Autonomous Memory Assistant
-- **Track**: Collaborative Multi-Agent Workflows
-- **Live Frontend**: https://memora-arh.vercel.app/app
-- **Live Backend**: https://memora-1iae.vercel.app
-- **Repository**: https://github.com/aruchith08/memora
-- **Solo Participant Entry**: Developed for the Stop Prompting, Solo Agents Hackathon 2026.
