@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, Shield, Server, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Database, Shield, Server, AlertTriangle } from 'lucide-react';
 import { HealthResponse } from '../../types/api';
 
 interface SystemStatusCardProps {
@@ -42,12 +42,12 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* 1. Vector Store Card */}
-      <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs hover:shadow-xs transition-shadow">
+      <div className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs">
         <div className="flex items-start gap-3.5 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center shrink-0">
             <Database size={19} />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-slate-900">Vector Store</span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
@@ -66,16 +66,15 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
             </p>
           </div>
         </div>
-        <ChevronRight size={18} className="text-slate-300 shrink-0 ml-2" />
       </div>
 
       {/* 2. Identity Scope Card */}
-      <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs hover:shadow-xs transition-shadow">
+      <div className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs">
         <div className="flex items-start gap-3.5 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
             <Shield size={19} />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <span className="text-sm font-semibold text-slate-900">Identity Scope</span>
             <p
               className="text-xs font-bold text-slate-800 font-mono truncate mt-0.5"
@@ -88,16 +87,15 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
             </p>
           </div>
         </div>
-        <ChevronRight size={18} className="text-slate-300 shrink-0 ml-2" />
       </div>
 
       {/* 3. Backend App Card */}
-      <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs hover:shadow-xs transition-shadow">
+      <div className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs">
         <div className="flex items-start gap-3.5 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
             <Server size={19} />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <span className="text-sm font-semibold text-slate-900">Backend App</span>
             <p className="text-xs font-bold text-slate-800 truncate mt-0.5">
               {health?.app || 'MEMORA Backend'}
@@ -110,7 +108,6 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
             </div>
           </div>
         </div>
-        <ChevronRight size={18} className="text-slate-300 shrink-0 ml-2" />
       </div>
     </div>
   );
