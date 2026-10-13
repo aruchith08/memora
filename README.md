@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 
 <p align="center">
-  <img src="docs/images/memora-landing.png" alt="MEMORA — Voice-Powered Autonomous Memory Assistant" width="100%" />
+  <img src="docs/images/memora-dashboard.png" alt="MEMORA — Voice-Powered Autonomous Memory Assistant Dashboard" width="100%" />
 </p>
 
 ---
