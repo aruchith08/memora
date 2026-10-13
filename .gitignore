@@ -26,6 +26,7 @@ node_modules/
 dist/
 build/
 .next/
+backend/static/
 
 # IDE / OS files
 .vscode/
@@ -42,3 +43,10 @@ Hackathon-Submission-Guide.pdf
 # Runtime debug artifacts
 latest_omi_payload.json
 latest_reasoning_result.json
+*.bak
+
+# Catalyst local configuration & artifacts
+.catalystrc
+catalyst.json
+backend/app-config.json
+backend/package_catalyst.py

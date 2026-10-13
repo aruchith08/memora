@@ -7,6 +7,7 @@ Covers all 7 required scenarios + question detection verification.
 import os
 import sys
 import unittest
+import uuid
 from unittest.mock import patch, MagicMock
 
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
@@ -77,17 +78,18 @@ class TestMilestone3C(unittest.TestCase):
     # 2. Explicit question: question detected, Qdrant retrieval called, Lyzr called with context
     @patch("lyzr_service.ask_lyzr")
     def test_2_explicit_question_triggers_pipeline(self, mock_ask_lyzr):
+        test_uid = f"user_q_test_{uuid.uuid4().hex[:8]}"
         mock_ask_lyzr.return_value = {
             "answer": "You studied DBMS and operating systems today.",
             "session_id": "sess-3c-002",
             "agent_id": "test-agent",
-            "user_id": "user_q_test",
+            "user_id": test_uid,
         }
 
         # Store previous memory
         store_memory(
             text="I studied DBMS and operating systems today.",
-            uid="user_q_test",
+            uid=test_uid,
             source="conversation",
         )
 
@@ -96,7 +98,7 @@ class TestMilestone3C(unittest.TestCase):
             "structured": {"overview": "User asked what they studied today."}
         }
 
-        response = self.client.post("/omi/conversation?uid=user_q_test&session_id=sess-3c-002", json=payload)
+        response = self.client.post(f"/omi/conversation?uid={test_uid}&session_id=sess-3c-002", json=payload)
         self.assertEqual(response.status_code, 200)
 
         # In TestClient, BackgroundTasks execute before response returns
@@ -104,7 +106,7 @@ class TestMilestone3C(unittest.TestCase):
         mock_ask_lyzr.assert_called_once()
         call_kwargs = mock_ask_lyzr.call_args[1]
         self.assertIn("What did I study today?", call_kwargs["question"])
-        self.assertEqual(call_kwargs["user_id"], "user_q_test")
+        self.assertEqual(call_kwargs["user_id"], test_uid)
         self.assertTrue(len(call_kwargs["context"]) > 0)
 
     # 3. Question with relevant previous memory: Lyzr receives previous memory as context
@@ -195,17 +197,18 @@ class TestMilestone3C(unittest.TestCase):
     # 6. Self-retrieval protection: current question text is not in its own context
     @patch("lyzr_service.ask_lyzr")
     def test_6_self_retrieval_protection(self, mock_ask_lyzr):
+        test_uid = f"user_self_test_{uuid.uuid4().hex[:8]}"
         mock_ask_lyzr.return_value = {
             "answer": "Exam is on Tuesday.",
             "session_id": "sess-self-test",
             "agent_id": "test-agent",
-            "user_id": "user_self_test",
+            "user_id": test_uid,
         }
 
         # Seed an actual past memory
         store_memory(
             text="The physics exam was moved to Tuesday at 2 PM.",
-            uid="user_self_test",
+            uid=test_uid,
             source="conversation",
         )
 
@@ -213,7 +216,7 @@ class TestMilestone3C(unittest.TestCase):
         question_text = "When is the physics exam?"
         result = process_reasoning_pipeline(
             question=question_text,
-            uid="user_self_test",
+            uid=test_uid,
             session_id="sess-self-test",
             store_question_as_memory=True,
         )

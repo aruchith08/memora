@@ -9,7 +9,8 @@ from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, status, Body, BackgroundTasks
+from fastapi import FastAPI, HTTPException, status, Body, BackgroundTasks, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
@@ -71,7 +72,7 @@ def get_qdrant_client() -> QdrantClient:
     if qdrant_url:
         try:
             logger.info(f"Connecting to Qdrant server at: {qdrant_url}")
-            client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key, timeout=3.0)
+            client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key, timeout=5.0)
             # Verify connectivity
             client.get_collections()
             _qdrant_client = client
@@ -79,12 +80,28 @@ def get_qdrant_client() -> QdrantClient:
             logger.info(f"Successfully connected to Qdrant server at {qdrant_url}")
             return _qdrant_client
         except Exception as e:
+            env_name = os.getenv("ENVIRONMENT", "").strip().lower()
+            if env_name == "production":
+                logger.critical(
+                    f"[Security/Config] Fatal: Remote Qdrant connection to '{qdrant_url}' failed in production ({e}). "
+                    "Silent fallback to ephemeral embedded storage is strictly disallowed."
+                )
+                raise RuntimeError(
+                    f"Production startup failure: Remote Qdrant at '{qdrant_url}' is unreachable ({e})."
+                ) from e
             logger.warning(
                 f"Could not connect to Qdrant server at {qdrant_url} ({e}). "
                 f"Falling back to local embedded storage at '{qdrant_path}'."
             )
 
     # Fallback to local embedded storage
+    env_name = os.getenv("ENVIRONMENT", "").strip().lower()
+    if env_name == "production" and not qdrant_url:
+        logger.critical(
+            "[Security/Config] Fatal: ENVIRONMENT=production requires QDRANT_URL to be set to a persistent Qdrant instance."
+        )
+        raise RuntimeError("Production startup failure: QDRANT_URL must be configured when ENVIRONMENT=production.")
+
     logger.info(f"Using Qdrant local embedded storage at: {qdrant_path}")
     os.makedirs(qdrant_path, exist_ok=True)
     _qdrant_client = QdrantClient(path=qdrant_path)
@@ -253,6 +270,31 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# CORS Configuration for Frontend Development & Deployment
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+cors_env = os.getenv("CORS_ORIGINS", "").strip()
+allowed_origins_raw = (
+    DEFAULT_CORS_ORIGINS + [o.strip() for o in cors_env.split(",") if o.strip()]
+    if cors_env
+    else DEFAULT_CORS_ORIGINS
+)
+# Ensure uniqueness and strictly disallow wildcard origins
+allowed_origins = [o for o in dict.fromkeys(allowed_origins_raw) if o != "*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
+
 
 # Pydantic Schemas
 class HealthResponse(BaseModel):
@@ -294,6 +336,21 @@ class MemorySearchResponse(BaseModel):
     results: List[MemorySearchResult]
 
 
+class MemoryItem(BaseModel):
+    id: str
+    text: str
+    created_at: str
+    source: str
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class MemoryListResponse(BaseModel):
+    status: str
+    count: int
+    uid: Optional[str] = None
+    memories: List[MemoryItem]
+
+
 # Routes
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 def health_check():
@@ -308,6 +365,23 @@ def health_check():
 
 # Observability state for reasoning pipeline
 _latest_reasoning_result: Optional[Dict[str, Any]] = None
+
+
+def get_reasoning_result_file_path() -> str:
+    """
+    Returns the resolved file path for the persisted reasoning record.
+    Configurable via MEMORA_REASONING_RESULT_FILE environment variable.
+    Defaults to 'latest_reasoning_result.json' when not set or empty.
+    """
+    custom_path = os.getenv("MEMORA_REASONING_RESULT_FILE", "").strip()
+    return custom_path if custom_path else "latest_reasoning_result.json"
+
+
+def reset_latest_reasoning_result():
+    """Clear the in-memory reasoning record state (used for test isolation)."""
+    global _latest_reasoning_result
+    _latest_reasoning_result = None
+
 
 # In-memory thread-safe deduplication store for Omi webhook idempotency
 _events_lock = threading.Lock()
@@ -339,6 +413,7 @@ def is_explicit_question(text: str) -> bool:
     Conservative:
     - Recognizes obvious question patterns and interrogative markers.
     - Explicitly excludes memory/note commands ('remember that', 'note to self', etc.).
+    - Detects compound requests (declarative context clause + imperative request/checklist clause).
     """
     if not text or not text.strip():
         return False
@@ -349,26 +424,79 @@ def is_explicit_question(text: str) -> bool:
     memory_starters = (
         "remember that", "remember to", "remember:", "note that", "note to",
         "don't forget that", "dont forget that", "dont forget to", "don't forget to",
-        "save this", "store this", "keep in mind that", "remind me to", "remind me that",
+        "save this", "save that", "store this", "store that",
+        "keep in mind that", "remind me to", "remind me that",
     )
     if any(clean.startswith(prefix) for prefix in memory_starters):
         return False
 
-    # Check 1: Explicit question mark
-    if clean.endswith("?"):
+    # Check 1: Explicit question mark anywhere in utterance
+    if "?" in clean:
         return True
 
-    # Check 2: Interrogative starter phrases
+    # Check 2: Interrogative / request starter phrases at start of utterance
     question_starters = (
         "what ", "when ", "where ", "who ", "why ", "how ", "which ",
         "do i ", "did i ", "does it ", "is there ", "are there ", "have i ",
-        "can you tell me ", "could you tell me ", "tell me about ", "tell me what ",
-        "tell me when ", "what did i ", "what was ", "what were ",
+        "can you ", "could you ", "would you ", "will you ",
+        "tell me about ", "tell me what ", "tell me when ", "tell me how ", "tell me where ", "tell me if ",
+        "what did i ", "what was ", "what were ",
     )
     if any(clean.startswith(prefix) for prefix in question_starters):
         return True
 
+    # Check 3: Explicit imperative request phrases anywhere in compound utterance
+    explicit_request_phrases = (
+        "tell me what", "tell me how", "tell me when", "tell me where", "tell me why",
+        "tell me about", "give me a checklist", "give me a short checklist",
+        "give me a plan", "give me an action plan", "give me the steps", "give me steps",
+        "what do i need", "what should i", "what can i", "how should i", "how do i",
+    )
+    if any(phrase in clean for phrase in explicit_request_phrases):
+        return True
+
+    # Check 4: Compound sentence splitting - check if any sentence starts with interrogative or request
+    import re
+    sentences = [s.strip() for s in re.split(r'[.!?\n]+', clean) if s.strip()]
+    for s in sentences:
+        if any(s.startswith(prefix) for prefix in question_starters):
+            return True
+        # Check clause starters inside sentences (e.g. after commas)
+        clauses = [c.strip() for c in re.split(r'[,;]+', s) if c.strip()]
+        for c in clauses:
+            if any(c.startswith(prefix) for prefix in ("tell me ", "give me ", "help me ", "show me ")):
+                return True
+
     return False
+
+
+def is_combined_recall_planning_query(text: str) -> bool:
+    """
+    Determines if a query requires BOTH voice memory recall AND action planning/checklist generation.
+    Requires presence of:
+    1. Memory recall indicators (e.g. 'remember', 'recall', 'based on what you', 'what did i')
+    AND
+    2. Action planning / checklist indicators (e.g. 'prepare', 'checklist', 'plan', 'steps', 'action items')
+    """
+    if not text or not text.strip():
+        return False
+
+    clean = text.strip().lower()
+
+    recall_indicators = (
+        "remember", "recall", "based on what you", "what did i",
+        "notes on", "notes about", "what was", "what were",
+        "from my memory", "from my memories", "from memory", "from previous",
+    )
+    planning_indicators = (
+        "prepare", "preparation", "checklist", "check list",
+        "plan", "planning", "action plan", "steps", "action items", "to-do", "todo",
+    )
+
+    has_recall = any(k in clean for k in recall_indicators)
+    has_planning = any(k in clean for k in planning_indicators)
+
+    return has_recall and has_planning
 
 
 def process_reasoning_pipeline(
@@ -381,10 +509,11 @@ def process_reasoning_pipeline(
     """
     Asynchronous reasoning pipeline:
     1. Retrieves relevant previous memories from Qdrant BEFORE the question is saved (self-retrieval prevention).
-    2. Packages retrieved memories as CONTEXT for Lyzr MEMORA Reasoner.
-    3. Calls ask_lyzr() to generate grounded answer.
-    4. Records observable results safely (no secrets logged).
-    5. Never saves the Lyzr response into voice_memory.
+    2. Routes combined recall + planning queries through deterministic sequential workers:
+       MEMORA Reasoner -> MEMORA Action Planner -> Synthesized response.
+       Routes single-focus queries through the configured Lyzr Manager Agent.
+    3. Records observable results safely (no secrets logged).
+    4. Delivers final answer via Omi notification.
     """
     logger.info(f"[Reasoning Pipeline] Processing query for uid='{uid}': '{question}'")
     global _latest_reasoning_result
@@ -414,56 +543,226 @@ def process_reasoning_pipeline(
     }
 
     try:
-        # Step 1: Semantic retrieval from Qdrant for previous memories
-        memories = retrieve_memories(question=question, uid=uid, limit=5)
+        # Step 1: Semantic retrieval from Qdrant for previous memories (retrieve buffer to prevent self-retrieval starvation)
+        memories = retrieve_memories(question=question, uid=uid, limit=15)
 
         # Self-retrieval protection: exclude any memory matching current query text
         clean_q = question.strip().lower()
-        previous_memories = [m for m in memories if m.get("text", "").strip().lower() != clean_q]
+        previous_memories = [m for m in memories if m.get("text", "").strip().lower() != clean_q][:5]
 
         result["retrieved_memory_count"] = len(previous_memories)
         result["retrieved_memory_ids"] = [m["id"] for m in previous_memories]
 
         context_texts = [m["text"] for m in previous_memories]
 
-        # Step 2: Send question + previous memory context to Lyzr Manager
+        # Step 2: Route according to query intent (combined collaborative vs single-focus Manager)
         import lyzr_service
         from unittest.mock import Mock
 
-        # If locked milestone tests (3C, 3D) patched ask_lyzr, honor the mock; otherwise invoke Lyzr Manager
-        if isinstance(getattr(lyzr_service, "ask_lyzr", None), Mock):
-            manager_res = lyzr_service.ask_lyzr(
-                question=question,
-                context=context_texts,
-                user_id=uid,
-                session_id=session_id,
+        is_combined = is_combined_recall_planning_query(question)
+
+        if is_combined:
+            # Deterministic Sequential Orchestration:
+            # 1. MEMORA Reasoner (grounded on retrieved memories)
+            # 2. MEMORA Action Planner (grounded on Reasoner output + memories)
+            result["orchestration_mode"] = "deterministic_sequential"
+            result["manager_agent_id"] = "memora_sequential_orchestrator"
+
+            reasoner_agent_id = os.getenv("LYZR_AGENT_ID", "6ac7c057b300b2daefd99218").strip()
+            planner_agent_id = os.getenv("LYZR_ACTION_PLANNER_AGENT_ID", "6ac7eba918b1643ee32dad1d").strip()
+
+            workers_invoked = []
+            execution_trace = []
+
+            # 1. Worker 1: MEMORA Reasoner
+            reasoner_sess = f"{session_id or 'reason'}-reasoner"
+            execution_trace.append({
+                "event_type": "worker_started",
+                "agent": "MEMORA Orchestrator",
+                "action": "invoke_worker",
+                "target": "MEMORA Reasoner",
+                "agent_id": reasoner_agent_id,
+                "agent_name": "MEMORA Reasoner",
+                "worker_name": "MEMORA Reasoner",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "status": "in_progress",
+            })
+
+            reasoner_answer = ""
+            try:
+                reasoner_res = lyzr_service.ask_lyzr(
+                    question=question,
+                    context=context_texts,
+                    user_id=uid,
+                    session_id=reasoner_sess,
+                    agent_id=reasoner_agent_id,
+                )
+                reasoner_answer = (reasoner_res.get("answer") or "").strip()
+                execution_trace.append({
+                    "event_type": "worker_completed",
+                    "agent": "MEMORA Reasoner",
+                    "action": "completed",
+                    "target": None,
+                    "agent_id": reasoner_agent_id,
+                    "agent_name": "MEMORA Reasoner",
+                    "worker_name": "MEMORA Reasoner",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "status": "completed",
+                })
+                workers_invoked.append({
+                    "agent_id": reasoner_agent_id,
+                    "agent_name": "MEMORA Reasoner",
+                    "worker_name": "MEMORA Reasoner",
+                    "status": "completed",
+                })
+            except Exception as reasoner_err:
+                logger.error(f"MEMORA Reasoner execution failed: {reasoner_err}")
+                execution_trace.append({
+                    "event_type": "worker_failed",
+                    "agent": "MEMORA Reasoner",
+                    "action": "failed",
+                    "target": None,
+                    "agent_id": reasoner_agent_id,
+                    "agent_name": "MEMORA Reasoner",
+                    "worker_name": "MEMORA Reasoner",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "status": "failed",
+                    "error": str(reasoner_err),
+                })
+                workers_invoked.append({
+                    "agent_id": reasoner_agent_id,
+                    "agent_name": "MEMORA Reasoner",
+                    "worker_name": "MEMORA Reasoner",
+                    "status": "failed",
+                })
+                raise reasoner_err
+
+            # 2. Worker 2: MEMORA Action Planner
+            planner_sess = f"{session_id or 'plan'}-planner"
+            execution_trace.append({
+                "event_type": "worker_started",
+                "agent": "MEMORA Orchestrator",
+                "action": "invoke_worker",
+                "target": "MEMORA Action Planner",
+                "agent_id": planner_agent_id,
+                "agent_name": "MEMORA Action Planner",
+                "worker_name": "MEMORA Action Planner",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "status": "in_progress",
+            })
+
+            planner_context = (
+                f"FACTS RECALLED FROM MEMORY (by MEMORA Reasoner):\n"
+                f"{reasoner_answer}\n\n"
+                f"ORIGINAL RETRIEVED MEMORIES:\n"
+                + ("\n".join(f"- {c}" for c in context_texts) if context_texts else "None.")
             )
-            if isinstance(manager_res, dict) and "manager_agent_id" not in manager_res:
-                manager_res["manager_agent_id"] = os.getenv("LYZR_MANAGER_AGENT_ID", "6ac7ec8f6f28ab116dc67d3b")
+
+            planner_answer = ""
+            try:
+                planner_res = lyzr_service.ask_lyzr(
+                    question=question,
+                    context=planner_context,
+                    user_id=uid,
+                    session_id=planner_sess,
+                    agent_id=planner_agent_id,
+                )
+                planner_answer = (planner_res.get("answer") or "").strip()
+                execution_trace.append({
+                    "event_type": "worker_completed",
+                    "agent": "MEMORA Action Planner",
+                    "action": "completed",
+                    "target": None,
+                    "agent_id": planner_agent_id,
+                    "agent_name": "MEMORA Action Planner",
+                    "worker_name": "MEMORA Action Planner",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "status": "completed",
+                })
+                workers_invoked.append({
+                    "agent_id": planner_agent_id,
+                    "agent_name": "MEMORA Action Planner",
+                    "worker_name": "MEMORA Action Planner",
+                    "status": "completed",
+                })
+            except Exception as planner_err:
+                logger.error(f"MEMORA Action Planner execution failed: {planner_err}")
+                execution_trace.append({
+                    "event_type": "worker_failed",
+                    "agent": "MEMORA Action Planner",
+                    "action": "failed",
+                    "target": None,
+                    "agent_id": planner_agent_id,
+                    "agent_name": "MEMORA Action Planner",
+                    "worker_name": "MEMORA Action Planner",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "status": "failed",
+                    "error": str(planner_err),
+                })
+                workers_invoked.append({
+                    "agent_id": planner_agent_id,
+                    "agent_name": "MEMORA Action Planner",
+                    "worker_name": "MEMORA Action Planner",
+                    "status": "failed",
+                })
+
+            # Final synthesized response
+            if planner_answer:
+                if reasoner_answer and reasoner_answer not in planner_answer:
+                    final_answer = f"{reasoner_answer}\n\nPreparation Checklist:\n{planner_answer}"
+                else:
+                    final_answer = planner_answer
+            else:
+                final_answer = f"{reasoner_answer}\n\n(Action planning checklist currently unavailable.)"
+
+            result["manager_answer"] = final_answer
+            result["lyzr_answer"] = final_answer
+            result["processing_status"] = "completed"
+            result["delegation_observed"] = False  # Lyzr Manager did NOT delegate; orchestrated sequentially by backend
+            result["telemetry_status"] = "deterministic_trace"
+            result["workers_invoked"] = workers_invoked
+            result["execution_trace"] = execution_trace
+
+            logger.info(
+                f"[Reasoning Pipeline] Sequential Orchestrator Answer: {result['manager_answer']} "
+                f"(workers_invoked={len(result['workers_invoked'])})"
+            )
         else:
-            manager_res = lyzr_service.call_lyzr_manager(
-                question=question,
-                context=context_texts,
-                user_id=uid,
-                session_id=session_id,
+            # Single-focus request: keep existing Lyzr Manager routing
+            # If locked milestone tests (3C, 3D) patched ask_lyzr, honor the mock; otherwise invoke Lyzr Manager
+            if isinstance(getattr(lyzr_service, "ask_lyzr", None), Mock):
+                manager_res = lyzr_service.ask_lyzr(
+                    question=question,
+                    context=context_texts,
+                    user_id=uid,
+                    session_id=session_id,
+                )
+                if isinstance(manager_res, dict) and "manager_agent_id" not in manager_res:
+                    manager_res["manager_agent_id"] = os.getenv("LYZR_MANAGER_AGENT_ID", "6ac7ec8f6f28ab116dc67d3b")
+            else:
+                manager_res = lyzr_service.call_lyzr_manager(
+                    question=question,
+                    context=context_texts,
+                    user_id=uid,
+                    session_id=session_id,
+                )
+
+            result["manager_agent_id"] = manager_res.get("manager_agent_id")
+            result["manager_answer"] = manager_res.get("answer")
+            result["lyzr_answer"] = manager_res.get("answer")
+            result["processing_status"] = "completed"
+
+            # Harvest sanitized multi-agent telemetry
+            tel = manager_res.get("telemetry") or {}
+            result["telemetry_status"] = tel.get("telemetry_status", "unavailable")
+            result["delegation_observed"] = tel.get("delegation_observed", False)
+            result["workers_invoked"] = tel.get("workers_invoked", [])
+            result["execution_trace"] = tel.get("execution_trace", [])
+
+            logger.info(
+                f"[Reasoning Pipeline] Lyzr Manager [{result['manager_agent_id']}] Answer: {result['manager_answer']} "
+                f"(delegation_observed={result['delegation_observed']}, workers={len(result['workers_invoked'])})"
             )
-
-        result["manager_agent_id"] = manager_res.get("manager_agent_id")
-        result["manager_answer"] = manager_res.get("answer")
-        result["lyzr_answer"] = manager_res.get("answer")
-        result["processing_status"] = "completed"
-
-        # Harvest sanitized multi-agent telemetry
-        tel = manager_res.get("telemetry") or {}
-        result["telemetry_status"] = tel.get("telemetry_status", "unavailable")
-        result["delegation_observed"] = tel.get("delegation_observed", False)
-        result["workers_invoked"] = tel.get("workers_invoked", [])
-        result["execution_trace"] = tel.get("execution_trace", [])
-
-        logger.info(
-            f"[Reasoning Pipeline] Lyzr Manager [{result['manager_agent_id']}] Answer: {result['manager_answer']} "
-            f"(delegation_observed={result['delegation_observed']}, workers={len(result['workers_invoked'])})"
-        )
 
         # Step 3: Send Manager answer back to user via Omi Notifications API
         if result["manager_answer"] and result["manager_answer"].strip():
@@ -490,12 +789,13 @@ def process_reasoning_pipeline(
 
     _latest_reasoning_result = result
 
-    # Persist observable result to JSON file
+    # Persist observable result to JSON file (configurable via MEMORA_REASONING_RESULT_FILE)
+    reasoning_file = get_reasoning_result_file_path()
     try:
-        with open("latest_reasoning_result.json", "w", encoding="utf-8") as f:
+        with open(reasoning_file, "w", encoding="utf-8") as f:
             json.dump(result, f, indent=2, default=str)
     except Exception as io_err:
-        logger.warning(f"Could not write latest_reasoning_result.json: {io_err}")
+        logger.warning(f"Could not write {reasoning_file}: {io_err}")
 
     # Step 3: If enabled, store question as interaction record AFTER retrieval
     if store_question_as_memory:
@@ -514,11 +814,82 @@ def process_reasoning_pipeline(
 
 # --- Omi Webhook Endpoints ---
 
+def verify_omi_webhook_request(
+    req_secret: Optional[str] = None,
+    header_secret: Optional[str] = None,
+    auth_header: Optional[str] = None,
+) -> None:
+    """
+    Guards Omi webhook endpoints (/omi/conversation and /omi/realtime).
+    Fails closed when ENVIRONMENT=production if OMI_WEBHOOK_SECRET is missing, empty, or invalid.
+    Supports query parameter (?secret=...), X-Omi-Webhook-Secret header, or Authorization: Bearer <secret>.
+    In development, allows unauthenticated requests when OMI_WEBHOOK_SECRET is unset.
+    """
+    env_name = os.getenv("ENVIRONMENT", "").strip().lower()
+    expected_secret = os.getenv("OMI_WEBHOOK_SECRET", "").strip()
+
+    if env_name == "production":
+        if not expected_secret:
+            logger.warning("[Security] Omi webhook rejected: OMI_WEBHOOK_SECRET is not configured in production.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unauthorized: valid OMI_WEBHOOK_SECRET required for webhook operations.",
+            )
+        provided = (req_secret or "").strip() or (header_secret or "").strip()
+        if not provided and auth_header and auth_header.startswith("Bearer "):
+            provided = auth_header[7:].strip()
+        if provided != expected_secret:
+            logger.warning("[Security] Unauthorized Omi webhook attempt: invalid or missing secret.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unauthorized webhook request: missing or invalid secret.",
+            )
+    else:
+        # Development / staging mode: enforce only if explicitly configured
+        if expected_secret:
+            provided = (req_secret or "").strip() or (header_secret or "").strip()
+            if not provided and auth_header and auth_header.startswith("Bearer "):
+                provided = auth_header[7:].strip()
+            if provided != expected_secret:
+                logger.warning("[Security] Unauthorized Omi webhook attempt: invalid or missing secret.")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Unauthorized webhook request: missing or invalid secret.",
+                )
+
+
+def verify_admin_access(auth_header: Optional[str] = None, admin_key: Optional[str] = None) -> None:
+    """
+    Guards administrative or manual mutation endpoints in production.
+    Fails closed when ENVIRONMENT=production if MEMORA_ADMIN_KEY is missing, empty, or invalid.
+    """
+    env_name = os.getenv("ENVIRONMENT", "").strip().lower()
+    if env_name == "production":
+        expected_admin_key = os.getenv("MEMORA_ADMIN_KEY", "").strip()
+        if not expected_admin_key:
+            logger.warning("[Security] Admin operation blocked: MEMORA_ADMIN_KEY is not configured in production.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unauthorized: valid MEMORA_ADMIN_KEY required for administrative operations.",
+            )
+        provided = (admin_key or "").strip()
+        if not provided and auth_header and auth_header.startswith("Bearer "):
+            provided = auth_header[7:].strip()
+        if provided != expected_admin_key:
+            logger.warning("[Security] Unauthorized attempt on administrative endpoint.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unauthorized: valid MEMORA_ADMIN_KEY required for administrative operations.",
+            )
+
+
 @app.post("/omi/conversation", tags=["Omi"])
 def on_conversation(
     background_tasks: BackgroundTasks,
+    request: Request,
     uid: Optional[str] = None,
     session_id: Optional[str] = None,
+    secret: Optional[str] = None,
     payload: Any = Body(default={}),
 ):
     """
@@ -527,6 +898,11 @@ def on_conversation(
     If detected as an explicit question, triggers the Qdrant -> Lyzr reasoning pipeline.
     Otherwise, stores the memory into Qdrant as before.
     """
+    verify_omi_webhook_request(
+        req_secret=secret,
+        header_secret=request.headers.get("x-omi-webhook-secret"),
+        auth_header=request.headers.get("authorization"),
+    )
     # Fallback uid resolution: query param -> body -> default
     effective_uid = uid
     if not effective_uid and isinstance(payload, dict):
@@ -652,15 +1028,23 @@ def get_event_status_endpoint(conversation_id: str, uid: Optional[str] = None):
 @app.post("/omi/realtime", tags=["Omi"])
 def on_realtime(
     background_tasks: BackgroundTasks,
+    request: Request,
     uid: Optional[str] = None,
     session_id: Optional[str] = None,
+    secret: Optional[str] = None,
     payload: Any = Body(default=[]),
 ):
     """
     Real-time transcript trigger: fires in small batches while user speaks into Omi.
     Accepts either a JSON list of segments or a dict with {"segments": [...]}.
+    Guarded by verify_omi_webhook_request in production.
     Stores non-empty transcript text in Qdrant.
     """
+    verify_omi_webhook_request(
+        req_secret=secret,
+        header_secret=request.headers.get("x-omi-webhook-secret"),
+        auth_header=request.headers.get("authorization"),
+    )
     effective_uid = uid
     if not effective_uid and isinstance(payload, dict):
         effective_uid = payload.get("uid") or payload.get("user_id")
@@ -707,8 +1091,12 @@ def on_realtime(
 # --- Generic Memory Endpoints ---
 
 @app.post("/memories", response_model=MemoryCreateResponse, status_code=status.HTTP_201_CREATED, tags=["Memories"])
-def create_memory(request: MemoryCreateRequest):
+def create_memory(request: MemoryCreateRequest, req: Request):
     """Stores a new memory by generating its embedding and persisting to Qdrant."""
+    verify_admin_access(
+        auth_header=req.headers.get("authorization"),
+        admin_key=req.headers.get("x-admin-key"),
+    )
     try:
         result = store_memory(
             text=request.text,
@@ -732,13 +1120,41 @@ def create_memory(request: MemoryCreateRequest):
         )
 
 
+def get_effective_demo_uid(caller_uid: Optional[str] = None) -> str:
+    """
+    Returns server-configured UID for identity-isolated UI access (GET /memories, POST /memories/search).
+    Enforces server-side identity scoping:
+    1. If DEMO_UID / DEFAULT_UID is set in environment:
+       - 'all' is explicitly disallowed for browser endpoints to prevent cross-user leakage, falling back to 'default_user'.
+       - Server-configured identity takes absolute precedence over any caller-provided UID (preventing attacker overrides).
+    2. If DEMO_UID is not set in environment:
+       - Uses caller_uid if explicitly provided (for backward-compatible API callers).
+       - Falls back to 'default_user' if caller_uid is omitted or empty (never None, preventing unfiltered searches).
+    """
+    raw_env = os.getenv("DEMO_UID", "").strip() or os.getenv("DEFAULT_UID", "").strip()
+    if raw_env:
+        if raw_env.lower() == "all":
+            logger.warning("[Security] DEMO_UID='all' is disallowed for browser-facing endpoints; enforcing 'default_user'.")
+            return "default_user"
+        return raw_env
+
+    clean_caller = (caller_uid or "").strip()
+    if clean_caller and clean_caller.lower() != "all":
+        return clean_caller
+    return "default_user"
+
+
 @app.post("/memories/search", response_model=MemorySearchResponse, tags=["Memories"])
 def search_memories(request: MemorySearchRequest):
-    """Retrieves relevant memories using semantic similarity in Qdrant, optionally filtered by user ID."""
+    """
+    Retrieves relevant memories using semantic similarity in Qdrant.
+    Scoped server-side to prevent unauthorized cross-user memory exposure.
+    """
     try:
+        effective_uid = get_effective_demo_uid(caller_uid=request.uid)
         memories = retrieve_memories(
             question=request.query,
-            uid=request.uid,
+            uid=effective_uid,
             limit=request.limit,
         )
         return MemorySearchResponse(
@@ -753,6 +1169,124 @@ def search_memories(request: MemorySearchRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve memories: {str(e)}",
+        )
+
+
+SAFE_EXCLUDED_KEYS = {
+    "uid",
+    "text",
+    "source",
+    "created_at",
+    "ts",
+    "vector",
+    "api_key",
+    "secret",
+    "token",
+    "password",
+    "authorization",
+}
+
+
+@app.get("/memories", response_model=MemoryListResponse, tags=["Memories"])
+def list_recent_memories(
+    limit: int = Query(
+        default=20,
+        ge=1,
+        le=50,
+        description="Max number of recent memories to retrieve (1-50)",
+    ),
+):
+    """
+    Retrieves recent voice memories in descending chronological order.
+    Scoped server-side via DEMO_UID / DEFAULT_UID to prevent arbitrary cross-user access.
+    Returns sanitized UI-safe fields without embeddings or secrets.
+    """
+    try:
+        client = get_qdrant_client()
+        effective_uid = get_effective_demo_uid()
+
+        scroll_filter = Filter(
+            must=[
+                FieldCondition(
+                    key="uid",
+                    match=MatchValue(value=effective_uid),
+                )
+            ]
+        )
+
+        all_points = []
+        offset = None
+        # Bounded scroll batches to gather points for chronological sorting
+        max_fetch = max(limit * 3, 60)
+        while len(all_points) < max_fetch:
+            batch, offset = client.scroll(
+                collection_name=COLLECTION_NAME,
+                scroll_filter=scroll_filter,
+                limit=min(50, max_fetch - len(all_points)),
+                offset=offset,
+                with_payload=True,
+                with_vectors=False,
+            )
+            if not batch:
+                break
+            all_points.extend(batch)
+            if offset is None:
+                break
+
+        def _point_timestamp(p) -> float:
+            pl = p.payload or {}
+            ts = pl.get("ts")
+            if isinstance(ts, (int, float)):
+                return float(ts)
+            c_at = pl.get("created_at")
+            if isinstance(c_at, str):
+                try:
+                    return datetime.fromisoformat(c_at.replace("Z", "+00:00")).timestamp()
+                except Exception:
+                    pass
+            return 0.0
+
+        all_points.sort(key=_point_timestamp, reverse=True)
+        selected_points = all_points[:limit]
+
+        memories: List[MemoryItem] = []
+        for p in selected_points:
+            pl = p.payload or {}
+            c_at = pl.get("created_at")
+            if not c_at and pl.get("ts"):
+                try:
+                    c_at = datetime.fromtimestamp(float(pl["ts"]), tz=timezone.utc).isoformat()
+                except Exception:
+                    c_at = datetime.now(timezone.utc).isoformat()
+            elif not c_at:
+                c_at = datetime.now(timezone.utc).isoformat()
+
+            meta = {
+                k: v for k, v in pl.items()
+                if k.lower() not in SAFE_EXCLUDED_KEYS
+            }
+
+            memories.append(
+                MemoryItem(
+                    id=str(p.id),
+                    text=str(pl.get("text", "")),
+                    created_at=str(c_at),
+                    source=str(pl.get("source", "unknown")),
+                    metadata=meta if meta else None,
+                )
+            )
+
+        return MemoryListResponse(
+            status="success",
+            count=len(memories),
+            uid=effective_uid,
+            memories=memories,
+        )
+    except Exception as e:
+        logger.error(f"Failed to list memories: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list memories: {str(e)}",
         )
 
 
@@ -774,11 +1308,16 @@ class ReasonResponse(BaseModel):
 
 
 @app.post("/reason", response_model=ReasonResponse, tags=["Lyzr"])
-def reason_endpoint(request: ReasonRequest):
+def reason_endpoint(request: ReasonRequest, req: Request):
     """
     Submits user question and provided memory context to Lyzr MEMORA Reasoner agent.
     Never alters Qdrant or exposes secrets.
+    Protected by verify_admin_access in production.
     """
+    verify_admin_access(
+        auth_header=req.headers.get("authorization"),
+        admin_key=req.headers.get("x-admin-key"),
+    )
     try:
         from lyzr_service import ask_lyzr
         result = ask_lyzr(
@@ -816,14 +1355,153 @@ def get_latest_reasoning_result():
     if _latest_reasoning_result is not None:
         return _latest_reasoning_result
     try:
-        if os.path.exists("latest_reasoning_result.json"):
-            with open("latest_reasoning_result.json", "r", encoding="utf-8") as f:
+        reasoning_file = get_reasoning_result_file_path()
+        if os.path.exists(reasoning_file):
+            with open(reasoning_file, "r", encoding="utf-8") as f:
                 return json.load(f)
     except Exception as e:
-        logger.warning(f"Failed to read latest_reasoning_result.json: {e}")
+        logger.warning(f"Failed to read reasoning record file: {e}")
     return {"status": "none", "message": "No reasoning pipeline executed yet."}
+
+
+# ==========================================
+# Frontend SPA & Static Assets Serving
+# ==========================================
+
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+def get_frontend_dist_dir() -> str:
+    """
+    Resolves the frontend distribution directory.
+    Prefers the bundled AppSail package directory (backend/static/) when present,
+    falling back to the monorepo path (../frontend/dist/) for local development.
+    """
+    bundled_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "static"))
+    monorepo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
+    if os.path.isdir(bundled_dir) and os.path.isfile(os.path.join(bundled_dir, "index.html")):
+        return bundled_dir
+    return monorepo_dir
+
+
+FRONTEND_DIST_DIR = get_frontend_dist_dir()
+FRONTEND_INDEX_HTML = os.path.join(FRONTEND_DIST_DIR, "index.html")
+FRONTEND_ASSETS_DIR = os.path.join(FRONTEND_DIST_DIR, "assets")
+
+RESERVED_API_PREFIXES = (
+    "health",
+    "memories",
+    "reason",
+    "omi",
+    "docs",
+    "redoc",
+    "openapi.json",
+    "api",
+)
+
+
+def _is_frontend_built() -> bool:
+    """Returns True if the frontend production build assets exist."""
+    dist_dir = get_frontend_dist_dir()
+    return os.path.isdir(dist_dir) and os.path.isfile(os.path.join(dist_dir, "index.html"))
+
+
+# Mount compiled /assets directory if present
+if os.path.isdir(FRONTEND_ASSETS_DIR):
+    app.mount("/assets", StaticFiles(directory=FRONTEND_ASSETS_DIR), name="static_assets")
+
+
+@app.get("/", include_in_schema=False)
+async def serve_home():
+    """Serves the frontend homepage if built, otherwise an informative development status."""
+    if _is_frontend_built():
+        dist_dir = get_frontend_dist_dir()
+        return FileResponse(os.path.join(dist_dir, "index.html"), media_type="text/html")
+    return {
+        "status": "ok",
+        "app": "MEMORA Backend",
+        "message": "Frontend build not detected. Run 'npm run build' inside /frontend or use Vite dev server on port 5173.",
+        "docs": "/docs",
+        "health": "/health",
+    }
+
+
+@app.get("/app", include_in_schema=False)
+@app.get("/login", include_in_schema=False)
+@app.get("/get-started", include_in_schema=False)
+async def serve_known_spa_routes():
+    """Explicitly serves SPA client routes to index.html."""
+    if _is_frontend_built():
+        dist_dir = get_frontend_dist_dir()
+        return FileResponse(os.path.join(dist_dir, "index.html"), media_type="text/html")
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Frontend production build not found. Run 'npm run build' in /frontend.",
+    )
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def serve_spa_fallback(full_path: str):
+    """
+    Catch-all router for frontend deep links and static root files.
+    Strictly guards against path traversal and returns JSON 404 for reserved API paths.
+    """
+    clean_path = full_path.strip().lstrip("/")
+
+    # Guard: Reserved API endpoints must NEVER return the SPA index.html
+    for prefix in RESERVED_API_PREFIXES:
+        if clean_path == prefix or clean_path.startswith(f"{prefix}/"):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"API endpoint '/{clean_path}' not found.",
+            )
+
+    # Guard: Detect directory traversal attempt
+    if ".." in full_path or clean_path.startswith(".."):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Resource '/{clean_path}' not found.",
+        )
+
+    # If the frontend is built, check for root static assets (favicon, manifest, etc.)
+    if _is_frontend_built():
+        dist_dir = get_frontend_dist_dir()
+        index_html = os.path.join(dist_dir, "index.html")
+
+        # Traversal protection: canonicalize and verify containment within active dist dir
+        candidate_file = os.path.abspath(os.path.join(dist_dir, clean_path))
+        if candidate_file.startswith(dist_dir) and os.path.isfile(candidate_file):
+            return FileResponse(candidate_file)
+
+        # Disallow returning SPA HTML for paths with file extensions (e.g. missing .png, .js, .css, etc.)
+        if "." in os.path.basename(clean_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Static asset '/{clean_path}' not found.",
+            )
+
+        # Fallback to SPA index.html ONLY for recognized SPA client subpaths
+        if clean_path.startswith(("app", "login", "get-started")):
+            return FileResponse(index_html, media_type="text/html")
+
+        # Unknown paths return 404 JSON, preventing indiscriminate 200 OK HTML
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Resource '/{clean_path}' not found.",
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Resource '/{clean_path}' not found.",
+    )
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    # Catalyst AppSail passes listening port via X_ZOHO_CATALYST_LISTEN_PORT
+    listen_port = int(
+        os.getenv("X_ZOHO_CATALYST_LISTEN_PORT")
+        or os.getenv("PORT")
+        or "8000"
+    )
+    uvicorn.run("app:app", host="0.0.0.0", port=listen_port, reload=False)

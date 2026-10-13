@@ -27,6 +27,7 @@ def get_lyzr_config() -> Dict[str, str]:
     """
     api_key = os.getenv("LYZR_API_KEY", "").strip()
     agent_id = os.getenv("LYZR_AGENT_ID", "").strip()
+    action_planner_agent_id = os.getenv("LYZR_ACTION_PLANNER_AGENT_ID", "6ac7eba918b1643ee32dad1d").strip()
     api_url = os.getenv("LYZR_API_URL", DEFAULT_LYZR_URL).strip() or DEFAULT_LYZR_URL
 
     if not api_key:
@@ -37,6 +38,7 @@ def get_lyzr_config() -> Dict[str, str]:
     return {
         "api_key": api_key,
         "agent_id": agent_id,
+        "action_planner_agent_id": action_planner_agent_id,
         "api_url": api_url,
     }
 
@@ -121,10 +123,12 @@ def ask_lyzr(
     context: Optional[Union[List[str], str]] = None,
     user_id: Optional[str] = None,
     session_id: Optional[str] = None,
+    agent_id: Optional[str] = None,
     timeout: float = 30.0,
 ) -> Dict[str, Any]:
     """
     Sends question and retrieved memory context to the configured Lyzr Agent.
+    Supports targeting an explicit agent_id (e.g. MEMORA Reasoner or MEMORA Action Planner).
     Returns structured answer dict without ever exposing secrets.
     """
     config = get_lyzr_config()
@@ -132,14 +136,19 @@ def ask_lyzr(
     if not question or not question.strip():
         raise ValueError("Question cannot be empty.")
 
+    target_agent_id = (agent_id or config["agent_id"]).strip()
     effective_user_id = (user_id or os.getenv("LYZR_USER_ID", "default_user")).strip()
-    effective_session_id = (session_id or os.getenv("LYZR_DEFAULT_SESSION_ID") or f"{config['agent_id']}-{uuid.uuid4().hex[:8]}").strip()
+    effective_session_id = (
+        session_id
+        or os.getenv("LYZR_DEFAULT_SESSION_ID")
+        or f"{target_agent_id}-{uuid.uuid4().hex[:8]}"
+    ).strip()
 
     prompt_message = format_reasoning_prompt(question=question, context=context)
 
     payload = {
         "user_id": effective_user_id,
-        "agent_id": config["agent_id"],
+        "agent_id": target_agent_id,
         "session_id": effective_session_id,
         "message": prompt_message,
     }
@@ -151,7 +160,7 @@ def ask_lyzr(
     }
 
     logger.info(
-        f"Dispatching reasoning prompt to Lyzr Agent (user='{effective_user_id}', "
+        f"Dispatching reasoning prompt to Lyzr Agent [{target_agent_id}] (user='{effective_user_id}', "
         f"session='{effective_session_id}', context_items={len(context) if isinstance(context, list) else 1})"
     )
 
@@ -183,7 +192,7 @@ def ask_lyzr(
     return {
         "answer": answer,
         "session_id": effective_session_id,
-        "agent_id": config["agent_id"],
+        "agent_id": target_agent_id,
         "user_id": effective_user_id,
     }
 

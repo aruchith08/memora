@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: memora
+    runtime: python
+    buildCommand: npm --prefix frontend ci && npm --prefix frontend run build && pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: ENVIRONMENT
+        value: production
+      - key: DEMO_UID
+        value: memora_demo_user
+      - key: HOST
+        value: 0.0.0.0
+      - key: QDRANT_COLLECTION_NAME
+        value: voice_memory
+      - key: LYZR_API_URL
+        value: https://agent-prod.studio.lyzr.ai/v3/inference/chat/
+      - key: LYZR_API_KEY
+        sync: false
+      - key: LYZR_AGENT_ID
+        sync: false
+      - key: LYZR_MANAGER_AGENT_ID
+        sync: false
+      - key: LYZR_ACTION_PLANNER_AGENT_ID
+        sync: false
+      - key: OMI_APP_ID
+        sync: false
+      - key: OMI_APP_SECRET
+        sync: false
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: OMI_WEBHOOK_SECRET
+        sync: false
+      - key: MEMORA_ADMIN_KEY
+        sync: false

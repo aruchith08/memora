@@ -4,10 +4,14 @@ All HTTP calls are mocked with unittest.mock; no live API calls are made.
 """
 
 import os
+import sys
 import unittest
 from unittest.mock import patch, MagicMock
 
 import requests
+
+# Ensure backend root is on sys.path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lyzr_service import (
     ask_lyzr,

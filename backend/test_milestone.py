@@ -54,7 +54,7 @@ def run_tests():
     # 3. Test direct retrieve_memories utility
     print("\n[TEST 3] Testing direct memory retrieval utility...")
     query = "When is my meeting with Lyzr?"
-    retrieved = retrieve_memories(question=query, limit=2)
+    retrieved = retrieve_memories(question=query, uid="default_user", limit=2)
     print(f"Query: '{query}'")
     print(f"Retrieved {len(retrieved)} memories:")
     for idx, mem in enumerate(retrieved, start=1):

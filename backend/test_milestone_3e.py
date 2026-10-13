@@ -53,6 +53,9 @@ class TestMilestone3E(unittest.TestCase):
             "OMI_APP_ID": "mock-omi-app-id",
             "OMI_APP_SECRET": "mock-omi-secret-key",
         }
+        for env_k in ("MEMORA_REASONING_RESULT_FILE", "QDRANT_PATH", "QDRANT_URL"):
+            if os.getenv(env_k):
+                self.mock_env[env_k] = os.getenv(env_k)
 
     # 1. Config validation tests
     def test_1_manager_config_validation(self):
