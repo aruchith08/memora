@@ -140,14 +140,79 @@ All routes are implemented and validated:
 
 ---
 
-## 8. Local Setup & Verification
+## 8. Environment Configuration & Deployment
 
-### Prerequisites
+### Environment Variables Reference
+
+MEMORA separates configuration from code. Ensure the following environment variables are configured in your `.env` (for local development) or within the **Vercel Project Dashboard** (for cloud production deployment).
+
+| Environment Variable | Required | Description | Example / Default Value |
+| :--- | :--- | :--- | :--- |
+| `QDRANT_URL` | **Yes** | HTTPS endpoint of your Qdrant Cloud cluster | `https://e3ccc9a4-....us-west-1-0.aws.cloud.qdrant.io:6333` |
+| `QDRANT_API_KEY` | **Yes** | Secret API key generated in Qdrant Cloud console | `th1s_is_a_s3cr3t_qd_k3y...` |
+| `QDRANT_COLLECTION_NAME`| No | Collection storing dense voice memories | `voice_memory` |
+| `LYZR_API_KEY` | **Yes** | API key generated in Lyzr Agent Studio | `sk-default-Q16lENgCJeRH...` |
+| `LYZR_AGENT_ID` | **Yes** | Lyzr Agent ID for reasoning & memory orchestration | `6ac7ec8f6f28ab116dc67d3b` |
+| `LYZR_MANAGER_AGENT_ID` | No | Secondary/fallback agent ID (auto-mirrored with agent ID) | `6ac7ec8f6f28ab116dc67d3b` |
+| `LYZR_USER_ID` | **Yes** | Email/user identifier registered with Lyzr Studio | `ruchith.alok@gmail.com` |
+| `LYZR_API_URL` | No | Lyzr chat inference API endpoint | `https://agent-prod.studio.lyzr.ai/v3/inference/chat/` |
+| `OMI_APP_ID` | **Yes** | App ID created in the Omi Developer Portal | `01M4E9ECHKVX2R4GKNH4XR7TX1` |
+| `OMI_APP_SECRET` | **Yes** | App secret for Omi API & webhook verification | `sk_46cca318be2d4648...` |
+| `DEMO_UID` | No | Server-scoped user ID for UI queries & Omi webhook fallback | `memora_demo_user` |
+| `CORS_ORIGINS` | No | Comma-separated list of allowed web frontend origins | `https://memora-arh.vercel.app,http://localhost:5173` |
+| `ENVIRONMENT` | No | Set to `production` or `development` | `production` |
+| `OMI_WEBHOOK_SECRET` | No | Optional webhook secret checked on incoming Omi calls | *(Leave blank for frictionless testing)* |
+| `MEMORA_ADMIN_KEY` | No | Admin key guarding mutation endpoints in production | *(Optional administrative secret)* |
+| `VITE_API_URL` *(Frontend)* | **Yes** | Backend URL configured in frontend Vercel deployment | `https://memora-1iae.vercel.app` |
+
+---
+
+### Vercel Backend Deployment Guide
+
+When deploying the FastAPI backend to Vercel (e.g., `memora-1iae.vercel.app`):
+
+1. **Open Vercel Project Settings**:
+   - Go to your Vercel Dashboard → Select your Backend Project.
+   - Navigate to **Settings** → **Environment Variables**.
+2. **Add Required Variables**:
+   - Add `QDRANT_URL`, `QDRANT_API_KEY`, `QDRANT_COLLECTION_NAME`.
+   - Add `LYZR_API_KEY`, `LYZR_AGENT_ID`, `LYZR_USER_ID`.
+   - Add `OMI_APP_ID`, `OMI_APP_SECRET`, `DEMO_UID`.
+   - Add `CORS_ORIGINS` containing `https://memora-arh.vercel.app`.
+   - Select **Production**, **Preview**, and **Development** environments for each variable.
+3. **Trigger a Redeployment (MANDATORY)**:
+   > [!IMPORTANT]
+   > In Vercel Serverless, adding or editing environment variables **does NOT affect running deployments retroactively**. You must trigger a fresh deployment:
+   > - In the Vercel Dashboard, go to the **Deployments** tab.
+   > - Click the three dots (`...`) next to the current production deployment.
+   > - Click **Redeploy** (ensure "Use existing Build Cache" is unticked if you want a clean rebuild).
+   > - Wait for the deployment to turn Ready, then check `https://<backend-url>/health` to verify.
+
+---
+
+### Omi Webhook Setup
+
+To connect live speech and recordings from your Omi wearable or mobile app into MEMORA:
+
+1. Open the **Omi Mobile App** → Navigate to **Apps** → Tap **Create / Edit App**.
+2. Set the Webhook URL to your backend:
+   ```text
+   https://memora-1iae.vercel.app/omi/conversation
+   ```
+   *(Alternative routes also supported: `https://memora-1iae.vercel.app/conversation` and `https://memora-1iae.vercel.app/omi/realtime`)*
+3. Enable **App Enabled** toggle and save.
+4. Whenever you speak or complete a conversation in Omi, the webhook automatically streams the transcript, titles, and action items directly to MEMORA, which indexes them in Qdrant Cloud.
+
+---
+
+### Local Setup & Verification
+
+#### Prerequisites
 - Python 3.11 or 3.12
 - Node.js 18+ and npm
 - [uv](https://docs.astral.sh/uv/) (recommended for fast Python environments)
 
-### 1. Clone & Configure Environment
+#### 1. Clone & Configure Environment
 ```bash
 git clone https://github.com/aruchith08/memora.git
 cd memora
@@ -157,13 +222,13 @@ cp backend/.env.example backend/.env
 # Populate QDRANT_URL, QDRANT_API_KEY, LYZR_API_KEY, etc.
 ```
 
-### 2. Run Backend
+#### 2. Run Backend
 ```bash
 cd backend
 uv run uvicorn app:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### 3. Run Frontend
+#### 3. Run Frontend
 ```bash
 cd ../frontend
 npm install
