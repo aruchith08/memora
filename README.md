@@ -2,7 +2,7 @@
 
 > **Continuous Ambient Intelligence · Semantic Vector Recall · Multi-Agent Sequential Reasoning**
 
-[![Live Frontend](https://img.shields.io/badge/Frontend-Vercel%20Live-brightgreen)](https://memora-one-pi.vercel.app/app)
+[![Live Frontend](https://img.shields.io/badge/Frontend-Vercel%20Live-brightgreen)](https://memora-arh.vercel.app/app)
 [![Live Backend](https://img.shields.io/badge/Backend-FastAPI%20on%20Vercel-blue)](https://memora-1iae.vercel.app/health)
 [![Qdrant Cloud](https://img.shields.io/badge/Vector%20DB-Qdrant%20Cloud-red)](https://qdrant.tech)
 [![Lyzr Agent Studio](https://img.shields.io/badge/Orchestrator-Lyzr%20Agent%20Studio-orange)](https://studio.lyzr.ai)
@@ -40,8 +40,8 @@ MEMORA creates an autonomous, privacy-conscious memory loop:
 
 | Component | Target / Environment | URL |
 | :--- | :--- | :--- |
-| **Frontend Dashboard** | Vercel (React + Vite + Tailwind CSS) | [https://memora-one-pi.vercel.app/app](https://memora-one-pi.vercel.app/app) |
-| **Public Landing Page** | Vercel SPA | [https://memora-one-pi.vercel.app](https://memora-one-pi.vercel.app) |
+| **Frontend Dashboard** | Vercel (React + Vite + Tailwind CSS) | [https://memora-arh.vercel.app/app](https://memora-arh.vercel.app/app) |
+| **Public Landing Page** | Vercel SPA | [https://memora-arh.vercel.app](https://memora-arh.vercel.app) |
 | **Backend Web Service** | Vercel Serverless Functions (Python ASGI) | [https://memora-1iae.vercel.app](https://memora-1iae.vercel.app) |
 | **Backend Health Check** | FastAPI `/health` | [https://memora-1iae.vercel.app/health](https://memora-1iae.vercel.app/health) |
 | **Source Code** | Public GitHub Repository | [https://github.com/aruchith08/memora](https://github.com/aruchith08/memora) |
@@ -196,7 +196,7 @@ npm --prefix frontend run build
 - **Structure**:
   1. **0:00–0:25**: Introduction to MEMORA, the problem of memory decay, and the solution.
   2. **0:25–1:00**: Architecture walkthrough (Omi voice capture → Qdrant vector memory → Lyzr collaborative agents).
-  3. **1:00–1:40**: Live Dashboard overview ([memora-one-pi.vercel.app/app](https://memora-one-pi.vercel.app/app)) showing connected backend and the 5 indexed demo memories.
+  3. **1:00–1:40**: Live Dashboard overview ([memora-arh.vercel.app/app](https://memora-arh.vercel.app/app)) showing connected backend and the 5 indexed demo memories.
   4. **1:40–2:20**: Live semantic search demonstration querying *"What should I prepare for my MSF class?"* (MSF class memory ranks #1 with ~78% relevance).
   5. **2:20–3:00**: Memory deletion & privacy control demo (forgetting a memory with permanent Qdrant removal).
   6. **3:00–3:30**: Conclusion, live URLs, and GitHub repository.
@@ -208,7 +208,7 @@ npm --prefix frontend run build
 - **Project Name**: MEMORA
 - **Project Title**: MEMORA — Voice-Powered Autonomous Memory Assistant
 - **Track**: Collaborative Multi-Agent Workflows
-- **Live Frontend**: https://memora-one-pi.vercel.app/app
+- **Live Frontend**: https://memora-arh.vercel.app/app
 - **Live Backend**: https://memora-1iae.vercel.app
 - **Repository**: https://github.com/aruchith08/memora
 - **Solo Participant Entry**: Developed for the Stop Prompting, Solo Agents Hackathon 2026.
