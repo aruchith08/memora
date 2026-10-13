@@ -30,7 +30,17 @@ MEMORA creates an autonomous, privacy-conscious memory loop:
 
 ---
 
-## 2. Live Deployments & Repository
+## 2. Official Hackathon Track
+
+- **Hackathon**: *The Dawn of the Autonomous AI Builder — Stop Prompting, Solo Agents Hackathon 2026*
+- **Organizers**: AI House × HiDevs
+- **Selected Build Track**: **Collaborative Multi-Agent Workflows**
+  *(Voice-triggered pipelines where specialized agents coordinate through a shared vector memory layer)*
+- **Secondary Alignment**: **Privacy-First Knowledge Systems** *(Granular user isolation, fail-closed admin controls, and verified record deletion)*
+
+---
+
+## 3. Live Deployments & Repository
 
 | Component | Target / Environment | URL |
 | :--- | :--- | :--- |
@@ -42,7 +52,7 @@ MEMORA creates an autonomous, privacy-conscious memory loop:
 
 ---
 
-## 3. End-to-End System Architecture
+## 4. End-to-End System Architecture
 
 ```mermaid
 flowchart TD
@@ -78,7 +88,7 @@ flowchart TD
 
 ---
 
-## 4. Technology Stack & Component Roles
+## 5. Technology Stack & Component Roles
 
 ### **Omi (Ambient Voice & Conversation Ingestion)**
 Omi serves as the voice interface. Transcripts from live physical conversations and streaming chunks are ingested through authenticated webhook endpoints (`POST /omi/conversation`, `POST /omi/realtime`). The backend enforces query-param and header-based secret verification (`OMI_WEBHOOK_SECRET`) to ensure payloads originate exclusively from trusted hardware. Inbound events are deduplicated with an in-memory lock to guarantee idempotent processing. Outbound notification capabilities are integrated to relay synthesized plans back to the wearable screen.
@@ -100,7 +110,7 @@ Lyzr powers the autonomous intelligence engine. Rather than relying on simple si
 
 ---
 
-## 5. Complete API Reference
+## 6. Complete API Reference
 
 All routes are implemented and validated:
 
@@ -119,7 +129,7 @@ All routes are implemented and validated:
 
 ---
 
-## 6. Security, Privacy & Memory Deletion
+## 7. Security, Privacy & Memory Deletion
 
 - **Zero Secret Exposure**: All credentials (`QDRANT_API_KEY`, `LYZR_API_KEY`, `OMI_WEBHOOK_SECRET`, `MEMORA_ADMIN_KEY`) are managed via environment variables and excluded from version control.
 - **Fail-Closed Administrative Gate**: Mutations (`POST /memories`, `DELETE /memories/{id}`, `POST /reason`) fail closed with `401 Unauthorized` in production if `MEMORA_ADMIN_KEY` is not provided.
@@ -129,7 +139,7 @@ All routes are implemented and validated:
 
 ---
 
-## 7. Environment Configuration & Deployment
+## 8. Environment Configuration & Deployment
 
 ### Environment Variables Reference
 
@@ -227,7 +237,7 @@ npm run dev
 
 ---
 
-## 8. Test Results & Verification
+## 9. Test Results & Verification
 
 All automated test suites pass cleanly:
 
