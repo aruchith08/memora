@@ -90,7 +90,7 @@ export const ReasoningTraceCard: React.FC<ReasoningTraceCardProps> = ({
             className="mt-4 w-full py-2.5 px-4 rounded-xl bg-blue-50/80 hover:bg-blue-100/80 border border-blue-200 text-blue-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
           >
             <Play size={12} className="fill-blue-700" />
-            <span>Run a test query</span>
+            <span>Search memory knowledge base</span>
           </button>
         </div>
       </div>

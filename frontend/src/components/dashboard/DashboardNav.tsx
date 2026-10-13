@@ -92,7 +92,7 @@ export const DashboardNav: React.FC<DashboardNavProps> = ({
             className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 px-2.5 py-1.5 rounded-xl border border-transparent hover:border-slate-200 transition-all"
           >
             <ArrowLeft size={13} />
-            <span className="hidden sm:inline">Marketing Site</span>
+            <span className="hidden sm:inline">Overview</span>
           </Link>
         </div>
       </div>

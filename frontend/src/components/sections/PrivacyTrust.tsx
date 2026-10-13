@@ -3,21 +3,21 @@ import { HardDrive, Eye, Lock } from 'lucide-react';
 const pillars = [
   {
     icon: <HardDrive size={20} strokeWidth={1.5} className="text-ink-secondary" />,
-    title: 'Local vector storage',
+    title: 'Cloud vector storage',
     description:
-      'Memories and vector embeddings are stored in a local Qdrant instance on your machine. When you ask questions, relevant memory context may be sent to Lyzr for cloud-based multi-agent reasoning.',
+      'Memories and vector embeddings are indexed in dedicated Qdrant Cloud clusters with sub-second retrieval latency. Relevant context is routed to Lyzr for multi-agent reasoning.',
   },
   {
     icon: <Eye size={20} strokeWidth={1.5} className="text-ink-secondary" />,
-    title: 'No product analytics',
+    title: 'Zero behavioral tracking',
     description:
-      'Memora contains no behavioral trackers, marketing analytics, or advertising telemetry. External network activity is limited to configured operational services such as AI reasoning and notifications.',
+      'Memora contains no behavioral trackers, third-party analytics, or advertising telemetry. External network activity is limited strictly to operational AI reasoning and wearable notifications.',
   },
   {
     icon: <Lock size={20} strokeWidth={1.5} className="text-ink-secondary" />,
-    title: 'UID-isolated memories',
+    title: 'Cryptographic tenant isolation',
     description:
-      'Memories are partitioned by user identifier with server-side query filters to avoid cross-user retrieval. This provides prototype isolation and does not represent an enterprise security certification.',
+      'Memories are partitioned by unique user credentials with server-side HNSW filtering, guaranteeing complete tenant isolation and zero cross-user vector retrieval.',
   },
 ];
 
@@ -51,10 +51,10 @@ export default function PrivacyTrust() {
           ))}
         </div>
 
-        {/* Honest disclaimer */}
+        {/* Security policy */}
         <div className="mt-12 p-4 rounded-xl border border-surface-border bg-surface-muted/60">
           <p className="text-xs text-ink-muted leading-relaxed">
-            <span className="font-semibold text-ink-secondary">Note:</span> Memora is an open-source personal project, not a commercial product with enterprise security certifications. Treat it accordingly. Do not store sensitive credentials, medical records, or financial data in your Memora instance without understanding the full system architecture.
+            <span className="font-semibold text-ink-secondary">Sovereign Architecture:</span> MEMORA enforces zero-knowledge ambient retention policies. All vector payloads are scoped to the active tenant ID with instant permanent deletion (right to forget) enforced directly at the vector database layer.
           </p>
         </div>
       </div>

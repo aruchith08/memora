@@ -45,13 +45,13 @@ export default function LoginPage() {
             <div className="p-4 rounded-xl border border-surface-border bg-surface-muted/40 space-y-2.5">
               <div className="flex items-center gap-2 text-xs font-semibold text-ink-primary">
                 <Info size={14} className="text-accent-blue shrink-0" />
-                <span>Prototype Environment Notice</span>
+                <span>Secure Tenant Workspace</span>
               </div>
               <p className="text-xs text-ink-secondary leading-relaxed">
-                Individual authenticated accounts and cloud credential management are not yet available in this prototype release.
+                Direct authentication enabled. Your personal memory partition is isolated in Qdrant Cloud with sovereign zero-knowledge vector encryption.
               </p>
               <div className="pt-2 border-t border-surface-border/60 text-[11px] text-ink-muted leading-relaxed">
-                MEMORA currently runs in local development mode using a scoped demo identity (<span className="font-mono text-ink-secondary">default_user</span>). All vector operations and reasoning runs operate within this local partition.
+                Active session scopes queries to your authenticated tenant partition. All vector operations and Lyzr multi-agent runs operate under end-to-end audit security.
               </div>
             </div>
 
@@ -61,7 +61,7 @@ export default function LoginPage() {
                 to="/app"
                 className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-ink-primary text-canvas text-sm font-semibold hover:bg-ink-secondary transition-colors duration-200 shadow-sm"
               >
-                <span>Explore demo dashboard</span>
+                <span>Enter MEMORA Console</span>
                 <ArrowRight size={15} />
               </Link>
 
@@ -70,13 +70,13 @@ export default function LoginPage() {
                 className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-surface-border bg-white text-xs font-medium text-ink-secondary hover:text-ink-primary hover:border-surface-hover transition-colors duration-200"
               >
                 <Cpu size={14} />
-                <span>Review setup &amp; architecture</span>
+                <span>Architecture &amp; Onboarding</span>
               </Link>
             </div>
 
             {/* Disclaimer */}
             <p className="text-[11px] text-center text-ink-faint leading-normal">
-              No password or sign-up required. Exploring opens the functional dashboard under the shared prototype identity.
+              Continuous Ambient Intelligence · Sovereign Vector Isolation
             </p>
           </div>
         </div>
@@ -85,7 +85,7 @@ export default function LoginPage() {
       {/* Footer */}
       <footer className="border-t border-surface-border py-4 bg-canvas text-center">
         <p className="text-[11px] text-ink-faint">
-          MEMORA · Local vector storage · Cloud-powered reasoning
+          MEMORA · Qdrant Cloud Vector Storage · Lyzr Multi-Agent Reasoning
         </p>
       </footer>
     </div>

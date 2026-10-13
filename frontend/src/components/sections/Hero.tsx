@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Mic, Brain, Zap, Check, Layers } from 'lucide-react';
 
-// Product preview matching Memora live pipeline mockup with audio wave and loader animations
+// Product preview showcasing MEMORA live audio ingestion, vector indexing and action pipeline
 function ProductPreviewCard() {
   const waveHeights = [20, 32, 16, 42, 60, 35, 75, 45, 90, 65, 80, 50, 68, 30, 48, 22];
 
@@ -80,7 +80,7 @@ function ProductPreviewCard() {
                 </span>
               </div>
               <p className="text-[11px] text-ink-muted leading-tight truncate font-mono">
-                Qdrant · bge-small-en-v1.5 · uid:demo
+                Qdrant Cloud · bge-small-en-v1.5 · tenant:secure
               </p>
             </div>
           </div>

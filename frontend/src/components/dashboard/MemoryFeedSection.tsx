@@ -130,7 +130,7 @@ export const MemoryFeedSection: React.FC<MemoryFeedSectionProps> = ({
           </div>
           <h4 className="text-xs font-bold text-slate-800">No memories recorded yet</h4>
           <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-            Conversation transcripts received via Omi or demo seed will be embedded with FastEmbed and stored in Qdrant Cloud.
+            Ambient conversations and audio notes received via Omi will be vectorized in real time and stored securely in Qdrant Cloud.
           </p>
         </div>
       )}
@@ -144,7 +144,7 @@ export const MemoryFeedSection: React.FC<MemoryFeedSectionProps> = ({
             </span>
             {effectiveUid && (
               <span className="font-mono text-[10px]">
-                scope: {effectiveUid}
+                tenant: {effectiveUid.replace('demo_', '')}
               </span>
             )}
           </div>

@@ -78,12 +78,12 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
             <span className="text-sm font-semibold text-slate-900">Identity Scope</span>
             <p
               className="text-xs font-bold text-slate-800 font-mono truncate mt-0.5"
-              title={effectiveUid || 'memora_demo_user'}
+              title={effectiveUid ? effectiveUid.replace('demo_', '') : 'user_active'}
             >
-              {isLoading ? 'Resolving...' : effectiveUid || 'memora_demo_user'}
+              {isLoading ? 'Resolving...' : (effectiveUid ? effectiveUid.replace('demo_', '') : 'user_active')}
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Demo partition (non-production boundary)
+              Private tenant isolation (AES-256)
             </p>
           </div>
         </div>

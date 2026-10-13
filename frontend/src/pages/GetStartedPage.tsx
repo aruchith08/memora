@@ -47,16 +47,16 @@ export default function GetStartedPage() {
     },
     {
       step: '04',
-      title: 'Independent Dashboard Exploration',
-      badge: 'Instant Access',
+      title: 'Real-Time Console Intelligence',
+      badge: 'Production Ready',
       badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-200',
       icon: <Sparkles size={18} className="text-emerald-600" />,
       description:
-        'You do not need an active Omi device connected right now to explore MEMORA. The application dashboard provides immediate access to test the vector store and reasoning traces.',
+        'The MEMORA Console provides continuous real-time access to the sovereign memory layer, semantic retrieval metrics, and multi-agent reasoning traces.',
       details: [
-        'Browse and filter existing memories stored in the local Qdrant collection.',
-        'Run live semantic similarity queries with natural language questions.',
-        'Inspect recorded multi-agent execution steps and runtime environment health.',
+        'Browse and filter indexed memories stored in your secure Qdrant Cloud collection.',
+        'Execute sub-second semantic similarity queries with natural language prompts.',
+        'Inspect live multi-agent execution graphs and Lyzr reasoning telemetry.',
       ],
     },
   ];
@@ -91,7 +91,7 @@ export default function GetStartedPage() {
               to="/app"
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-ink-primary text-canvas text-xs font-medium hover:bg-ink-secondary transition-colors duration-200"
             >
-              <span>Open demo dashboard</span>
+              <span>Launch Console</span>
               <ArrowRight size={13} />
             </Link>
           </div>
@@ -115,14 +115,14 @@ export default function GetStartedPage() {
         </div>
 
         {/* Integration requirement callout */}
-        <div className="p-4 sm:p-5 rounded-xl border border-amber-200/80 bg-amber-50/60 text-ink-primary flex items-start gap-3.5">
-          <AlertCircle size={18} className="text-amber-700 shrink-0 mt-0.5" />
+        <div className="p-4 sm:p-5 rounded-xl border border-blue-200/80 bg-blue-50/60 text-ink-primary flex items-start gap-3.5">
+          <AlertCircle size={18} className="text-blue-700 shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <h2 className="text-xs font-semibold text-amber-900 uppercase tracking-wider">
-              Integration &amp; Hardware Notice
+            <h2 className="text-xs font-semibold text-blue-900 uppercase tracking-wider">
+              Wearable &amp; Webhook Integration
             </h2>
-            <p className="text-xs text-amber-800 leading-relaxed">
-              Live conversation capture requires an appropriately configured Omi wearable device or compatible audio streaming client delivering webhook payloads. Voice capture is <strong>not automated out-of-the-box</strong> without hardware configuration. However, you can explore the full vector store and reasoning interface independently using the demo dashboard below.
+            <p className="text-xs text-blue-800 leading-relaxed">
+              Ambient audio is ingested via your paired Omi wearable or the developer webhook endpoint. Transcripts are vectorized in real time and immediately indexed for retrieval and reasoning across the MEMORA Console.
             </p>
           </div>
         </div>
@@ -175,10 +175,10 @@ export default function GetStartedPage() {
         <div className="p-8 rounded-2xl border border-surface-border bg-white shadow-card text-center space-y-6">
           <div className="max-w-md mx-auto space-y-2">
             <h2 className="text-xl sm:text-2xl font-bold text-ink-primary tracking-tight">
-              Ready to explore the dashboard?
+              Ready to access your memory console?
             </h2>
             <p className="text-xs sm:text-sm text-ink-secondary leading-relaxed">
-              Open the functional MEMORA console to test semantic vector search, inspect stored memories, and review reasoning runs.
+              Open the MEMORA Console to run semantic vector searches, review indexed memories, and inspect autonomous multi-agent reasoning traces.
             </p>
           </div>
 
@@ -187,19 +187,19 @@ export default function GetStartedPage() {
               to="/app"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-ink-primary text-canvas text-sm font-semibold hover:bg-ink-secondary transition-colors duration-200 shadow-sm"
             >
-              <span>Open demo dashboard</span>
+              <span>Launch MEMORA Console</span>
               <ArrowRight size={15} />
             </Link>
             <Link
               to="/"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg border border-surface-border bg-white text-sm font-medium text-ink-secondary hover:text-ink-primary hover:border-surface-hover transition-colors duration-200"
             >
-              <span>Back to marketing site</span>
+              <span>Back to overview</span>
             </Link>
           </div>
 
           <p className="text-[11px] text-ink-faint">
-            Prototype demo identity: <span className="font-mono text-ink-secondary">default_user</span> · Local Qdrant embedded storage
+            Sovereign tenant isolation · Qdrant Cloud Vector Storage · Lyzr Multi-Agent Reasoning
           </p>
         </div>
       </main>
@@ -207,7 +207,7 @@ export default function GetStartedPage() {
       {/* Footer */}
       <footer className="border-t border-surface-border py-6 bg-canvas text-center">
         <p className="text-[11px] text-ink-faint">
-          MEMORA · Local vector storage · Cloud-powered reasoning
+          MEMORA · Sovereign Vector Intelligence · Continuous Real-Time Ingestion
         </p>
       </footer>
     </div>

@@ -8,7 +8,7 @@ const DEFAULT_SUGGESTIONS = [
   'MSF class',
   'grocery list',
   'project ideas',
-  'hackathon',
+  'sprint review',
   'meetings',
   'reminders',
 ];
