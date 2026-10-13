@@ -39,6 +39,27 @@ EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 VECTOR_DIM = 384
 DISTANCE_METRIC = Distance.COSINE
 
+
+def get_fastembed_cache_path() -> str:
+    """
+    Resolves the writable directory for caching FastEmbed/ONNX model files.
+    Priority:
+    1. Explicit FASTEMBED_CACHE_PATH environment variable if set.
+    2. /tmp/fastembed_cache on Vercel/Linux serverless environments (or when /tmp exists and is writable).
+    3. Fallback to local ./fastembed_cache or system temporary folder.
+    """
+    configured = os.getenv("FASTEMBED_CACHE_PATH", "").strip()
+    if configured:
+        return configured
+
+    # Detect Vercel serverless environment (VERCEL=1) or writable /tmp
+    if os.getenv("VERCEL") == "1" or (os.path.isdir("/tmp") and os.access("/tmp", os.W_OK)):
+        return "/tmp/fastembed_cache"
+
+    # Default to local cache in working directory or standard user cache
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), "fastembed_cache"))
+
+
 # Globals for lazy/lifespan initialization
 _qdrant_client: Optional[QdrantClient] = None
 _embedding_model: Optional[TextEmbedding] = None
@@ -46,11 +67,20 @@ _qdrant_mode: str = "uninitialized"
 
 
 def get_embedding_model() -> TextEmbedding:
-    """Lazily load and cache the FastEmbed model."""
+    """Lazily load and cache the FastEmbed model using a guaranteed writable cache path."""
     global _embedding_model
     if _embedding_model is None:
-        logger.info(f"Loading FastEmbed model: {EMBEDDING_MODEL_NAME}")
-        _embedding_model = TextEmbedding(model_name=EMBEDDING_MODEL_NAME)
+        cache_path = get_fastembed_cache_path()
+        os.makedirs(cache_path, exist_ok=True)
+
+        # Propagate cache path to environment variables for underlying Hugging Face / Xet tooling
+        os.environ.setdefault("FASTEMBED_CACHE_PATH", cache_path)
+        os.environ.setdefault("HF_HOME", cache_path)
+        os.environ.setdefault("HF_HUB_CACHE", os.path.join(cache_path, "hub"))
+        os.environ.setdefault("HF_XET_CACHE", os.path.join(cache_path, "xet"))
+
+        logger.info(f"Loading FastEmbed model: {EMBEDDING_MODEL_NAME} (cache_dir={cache_path})")
+        _embedding_model = TextEmbedding(model_name=EMBEDDING_MODEL_NAME, cache_dir=cache_path)
         logger.info("FastEmbed model loaded successfully.")
     return _embedding_model
 
@@ -371,10 +401,19 @@ def get_reasoning_result_file_path() -> str:
     """
     Returns the resolved file path for the persisted reasoning record.
     Configurable via MEMORA_REASONING_RESULT_FILE environment variable.
-    Defaults to 'latest_reasoning_result.json' when not set or empty.
+    Priority:
+    1. Explicit MEMORA_REASONING_RESULT_FILE environment variable if set.
+    2. /tmp/latest_reasoning_result.json in Vercel/Linux serverless environments (or when /tmp is writable).
+    3. Fallback to 'latest_reasoning_result.json' in current working directory for local development.
     """
     custom_path = os.getenv("MEMORA_REASONING_RESULT_FILE", "").strip()
-    return custom_path if custom_path else "latest_reasoning_result.json"
+    if custom_path:
+        return custom_path
+
+    if os.getenv("VERCEL") == "1" or (os.path.isdir("/tmp") and os.access("/tmp", os.W_OK)):
+        return "/tmp/latest_reasoning_result.json"
+
+    return "latest_reasoning_result.json"
 
 
 def reset_latest_reasoning_result():

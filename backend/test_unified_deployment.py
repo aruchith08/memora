@@ -325,6 +325,28 @@ class TestUnifiedDeployment(unittest.TestCase):
         )
         self.assertEqual(memora_app.get_frontend_dist_dir(), bundled_static)
 
+    # 10. FastEmbed Cache Path Resolution
+    def test_10_fastembed_cache_path_resolution(self):
+        """Verifies that get_fastembed_cache_path resolves appropriately for env and serverless."""
+        # Case A: Explicit FASTEMBED_CACHE_PATH env var
+        with patch.dict(os.environ, {"FASTEMBED_CACHE_PATH": "/custom/cache/dir"}):
+            self.assertEqual(memora_app.get_fastembed_cache_path(), "/custom/cache/dir")
+
+        # Case B: Serverless environment detected (VERCEL=1)
+        with patch.dict(os.environ, {"FASTEMBED_CACHE_PATH": "", "VERCEL": "1"}):
+            self.assertEqual(memora_app.get_fastembed_cache_path(), "/tmp/fastembed_cache")
+
+    # 11. Reasoning Result Path Resolution
+    def test_11_reasoning_result_path_resolution(self):
+        """Verifies that get_reasoning_result_file_path resolves appropriately for env and serverless."""
+        # Case A: Explicit MEMORA_REASONING_RESULT_FILE
+        with patch.dict(os.environ, {"MEMORA_REASONING_RESULT_FILE": "/custom/path/result.json"}):
+            self.assertEqual(memora_app.get_reasoning_result_file_path(), "/custom/path/result.json")
+
+        # Case B: Serverless environment detected (VERCEL=1)
+        with patch.dict(os.environ, {"MEMORA_REASONING_RESULT_FILE": "", "VERCEL": "1"}):
+            self.assertEqual(memora_app.get_reasoning_result_file_path(), "/tmp/latest_reasoning_result.json")
+
 
 if __name__ == "__main__":
     unittest.main()

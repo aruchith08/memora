@@ -14,8 +14,9 @@ venv/
 .venv/
 ENV/
 
-# Qdrant data
+# Qdrant & Model cache
 **/qdrant_storage/
+**/fastembed_cache/
 
 # Environment files
 **/.env
