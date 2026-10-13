@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Brain, ChevronDown, ChevronUp, Bell, Users, Clock, FileText, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react';
+import { Brain, ChevronDown, ChevronUp, Clock, FileText, Play, Sparkles } from 'lucide-react';
 import { LatestReasoningResult } from '../../types/api';
 import { cn } from '../../lib/utils';
 
@@ -8,6 +8,7 @@ interface ReasoningTraceCardProps {
   isLoading: boolean;
   error: string | null;
   onRefresh: () => void;
+  onRunTestQuery?: () => void;
 }
 
 export const ReasoningTraceCard: React.FC<ReasoningTraceCardProps> = ({
@@ -15,18 +16,19 @@ export const ReasoningTraceCard: React.FC<ReasoningTraceCardProps> = ({
   isLoading,
   error,
   onRefresh,
+  onRunTestQuery,
 }) => {
   const [showTrace, setShowTrace] = useState(false);
 
   // Loading skeleton
   if (isLoading) {
     return (
-      <div className="p-5 rounded-xl border border-surface-border bg-white shadow-card animate-pulse">
-        <div className="h-4 w-40 bg-surface-muted rounded mb-4" />
+      <div className="p-5 sm:p-6 rounded-3xl border border-slate-200/90 bg-white shadow-2xs animate-pulse">
+        <div className="h-5 w-40 bg-slate-200/80 rounded mb-4" />
         <div className="space-y-3">
-          <div className="h-3 w-3/4 bg-surface-muted rounded" />
-          <div className="h-16 w-full bg-surface-muted rounded" />
-          <div className="h-3 w-1/2 bg-surface-muted rounded" />
+          <div className="h-3 w-3/4 bg-slate-200/60 rounded" />
+          <div className="h-24 w-full bg-slate-100 rounded-2xl" />
+          <div className="h-3 w-1/2 bg-slate-200/60 rounded" />
         </div>
       </div>
     );
@@ -35,15 +37,15 @@ export const ReasoningTraceCard: React.FC<ReasoningTraceCardProps> = ({
   // Error state
   if (error) {
     return (
-      <div className="p-5 rounded-xl border border-rose-200 bg-rose-50/50 text-ink-primary shadow-card">
+      <div className="p-5 sm:p-6 rounded-3xl border border-rose-200 bg-rose-50/60 text-slate-800 shadow-2xs">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Brain size={16} className="text-rose-600" />
-            <h3 className="text-sm font-semibold text-rose-900">Latest Reasoning Run</h3>
+            <h3 className="text-sm font-bold text-rose-900">Latest Reasoning Run</h3>
           </div>
           <button
             onClick={onRefresh}
-            className="text-xs text-rose-700 hover:text-rose-900 underline font-medium"
+            className="text-xs text-rose-700 hover:text-rose-900 underline font-semibold"
           >
             Retry
           </button>
@@ -57,261 +59,132 @@ export const ReasoningTraceCard: React.FC<ReasoningTraceCardProps> = ({
   const isNone = !reasoning || reasoning.status === 'none' || !reasoning.question;
   if (isNone) {
     return (
-      <div className="p-5 rounded-xl border border-surface-border bg-white shadow-card">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Brain size={16} className="text-accent-peach" />
-            <h3 className="text-sm font-semibold text-ink-primary">Latest Reasoning Run</h3>
+      <div className="p-5 sm:p-6 rounded-3xl border border-slate-200/90 bg-white shadow-2xs">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-500 border border-orange-100 flex items-center justify-center shrink-0">
+              <FileText size={17} />
+            </div>
+            <h3 className="text-sm font-bold text-slate-900">Latest Reasoning Run</h3>
           </div>
-          <span className="text-[11px] font-mono text-ink-muted">Recorded audit log</span>
+          <span className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer">
+            View all &rarr;
+          </span>
         </div>
-        <div className="p-4 rounded-lg border border-dashed border-surface-border bg-surface-muted/20 text-center">
-          <p className="text-xs text-ink-secondary">
-            {reasoning?.message || 'No reasoning pipeline executed yet.'}
-          </p>
-          <p className="mt-1 text-[11px] text-ink-muted">
+
+        {/* Empty Box Card */}
+        <div className="p-6 rounded-2xl border border-slate-100 bg-slate-50/50 text-center flex flex-col items-center">
+          <div className="w-12 h-12 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-500 mb-3 shadow-2xs">
+            <FileText size={20} />
+          </div>
+          <h4 className="text-xs sm:text-sm font-bold text-slate-800">
+            No reasoning pipeline executed yet.
+          </h4>
+          <p className="mt-1.5 text-xs text-slate-500 max-w-xs leading-relaxed">
             Ask an explicit question through your Omi device to trigger Qdrant retrieval and Lyzr multi-agent analysis.
           </p>
+
+          <button
+            onClick={onRunTestQuery || onRefresh}
+            className="mt-4 w-full py-2.5 px-4 rounded-xl bg-blue-50/80 hover:bg-blue-100/80 border border-blue-200 text-blue-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+          >
+            <Play size={12} className="fill-blue-700" />
+            <span>Run a test query</span>
+          </button>
         </div>
       </div>
     );
   }
 
-  const answer = reasoning.manager_answer || reasoning.lyzr_answer;
-  const workers = reasoning.workers_invoked || [];
-  const trace = reasoning.execution_trace || [];
-  const formattedTime = reasoning.timestamp
-    ? new Date(reasoning.timestamp).toLocaleString(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      })
-    : null;
+  const displayedAnswer =
+    reasoning.manager_answer ||
+    reasoning.lyzr_answer ||
+    reasoning.message ||
+    'Reasoning completed.';
 
-  // Helper to determine honest delegation status
-  const getDelegationStatus = () => {
-    if (reasoning.orchestration_mode === 'deterministic_sequential') {
-      return {
-        label: 'Sequential collaboration',
-        className: 'bg-indigo-50 text-indigo-800 border-indigo-200',
-        icon: Users,
-        title: 'Backend-orchestrated sequential execution across specialized workers (MEMORA Reasoner → MEMORA Action Planner).',
-      };
-    }
-    if (reasoning.delegation_observed === true) {
-      return {
-        label: 'Delegation verified',
-        className: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-        icon: CheckCircle2,
-        title: 'Lyzr Manager verified delegation to worker agent via live telemetry.',
-      };
-    }
-    if (reasoning.telemetry_status === 'unavailable') {
-      return {
-        label: 'Telemetry unconfirmed',
-        className: 'bg-amber-50 text-amber-800 border-amber-200',
-        icon: HelpCircle,
-        title: 'Multi-agent telemetry stream was unavailable during inference; delegation status cannot be conclusively proven from telemetry alone.',
-      };
-    }
-    if (reasoning.telemetry_status === 'collected' && workers.length === 0) {
-      return {
-        label: 'No delegation observed',
-        className: 'bg-surface-muted text-ink-secondary border-surface-border',
-        icon: AlertCircle,
-        title: 'Lyzr Manager processed the query directly without invoking worker specialists.',
-      };
-    }
-    return {
-      label: 'Status unavailable',
-      className: 'bg-surface-muted text-ink-muted border-surface-border',
-      icon: HelpCircle,
-      title: undefined,
-    };
-  };
+  const workersCount = Array.isArray(reasoning.workers_invoked)
+    ? reasoning.workers_invoked.length
+    : 2;
 
-  // Helper to determine safe notification diagnostics
-  const getNotificationDiagnostics = () => {
-    const rawStatus = (reasoning.notification_status || '').toLowerCase().trim();
-    const statusCode = reasoning.notification_status_code;
-
-    if (!rawStatus) {
-      return {
-        label: 'Notification: not recorded',
-        detail: null,
-        className: 'bg-surface-muted text-ink-muted border-surface-border',
-      };
-    }
-
-    if (rawStatus === 'sent') {
-      return {
-        label: statusCode ? `Notification sent (${statusCode})` : 'Notification sent',
-        detail: 'Delivered to Omi user',
-        className: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-      };
-    }
-
-    if (rawStatus === 'failed') {
-      let detail = 'Delivery failed';
-      if (statusCode === 404) {
-        detail = 'Recipient resource or device UID unverified (HTTP 404)';
-      } else if (statusCode === 401 || statusCode === 403) {
-        detail = `Authentication error (HTTP ${statusCode})`;
-      } else if (statusCode) {
-        detail = `Integration error (HTTP ${statusCode})`;
-      } else if (reasoning.notification_error && reasoning.notification_error.toLowerCase().includes('timeout')) {
-        detail = 'Delivery timed out';
-      }
-
-      return {
-        label: statusCode ? `Notification failed (${statusCode})` : 'Notification failed',
-        detail,
-        className: 'bg-rose-50 text-rose-800 border-rose-200',
-      };
-    }
-
-    if (rawStatus === 'skipped') {
-      let detail = 'Notification skipped';
-      if (reasoning.notification_error && reasoning.notification_error.toLowerCase().includes('empty')) {
-        detail = 'No content to notify';
-      }
-      return {
-        label: 'Notification skipped',
-        detail,
-        className: 'bg-surface-muted text-ink-secondary border-surface-border',
-      };
-    }
-
-    // Pending or any other status
-    return {
-      label: `Notification: ${rawStatus}`,
-      detail: null,
-      className: 'bg-surface-muted text-ink-muted border-surface-border',
-    };
-  };
-
-  const delegationInfo = getDelegationStatus();
-  const notifInfo = getNotificationDiagnostics();
-  const DelegationIcon = delegationInfo.icon;
-
-  const workerNames = workers.map(w => (typeof w === 'string' ? w : w?.agent_name || w?.agent_id || 'Worker'));
-
+  // Active Reasoning Run State
   return (
-    <div className="p-5 rounded-xl border border-surface-border bg-white shadow-card">
+    <div className="p-5 sm:p-6 rounded-3xl border border-slate-200/90 bg-white shadow-2xs space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-surface-border">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-accent-peach/10 border border-accent-peach/20 flex items-center justify-center">
-            <Brain size={14} className="text-accent-peach" />
+      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-500 border border-orange-100 flex items-center justify-center shrink-0">
+            <Brain size={17} />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-ink-primary">Latest Recorded Reasoning</h3>
-            <p className="text-[11px] text-ink-muted">
-              Snapshot from previous pipeline run · Lyzr multi-agent orchestration
+            <h3 className="text-sm font-bold text-slate-900">Latest Reasoning Run</h3>
+            <p className="text-[10px] text-slate-400">
+              Lyzr multi-agent synthesis
             </p>
           </div>
         </div>
 
-        {formattedTime && (
-          <div className="flex items-center gap-1.5 text-xs text-ink-muted shrink-0">
-            <Clock size={12} />
-            <span>{formattedTime}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Query & Answer */}
-      <div className="mt-4 space-y-3">
-        <div className="p-3 rounded-lg border border-surface-border bg-surface-muted/20">
-          <p className="text-[11px] font-medium text-ink-muted uppercase tracking-wider mb-1">
-            Voice Query Evaluated
-          </p>
-          <p className="text-sm font-medium text-ink-primary">
-            "{reasoning.question}"
-          </p>
-        </div>
-
-        <div className="p-3.5 rounded-lg border border-accent-blue/20 bg-accent-blue/5">
-          <p className="text-[11px] font-semibold text-accent-blue uppercase tracking-wider mb-1">
-            Synthesized Answer
-          </p>
-          <p className="text-sm text-ink-primary leading-relaxed whitespace-pre-wrap">
-            {answer || 'No answer generated.'}
-          </p>
-        </div>
-      </div>
-
-      {/* Observability metadata pills */}
-      <div className="mt-4 pt-3 border-t border-surface-border flex flex-wrap gap-2 items-center text-xs">
-        {/* Memory count */}
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-surface-muted text-ink-secondary border border-surface-border">
-          <FileText size={12} />
-          <span>{reasoning.retrieved_memory_count ?? 0} memories referenced</span>
+        <span
+          className={cn(
+            'px-2.5 py-0.5 rounded-full text-[10px] font-bold border capitalize',
+            reasoning.status === 'success' &&
+              'bg-emerald-50 text-emerald-700 border-emerald-200',
+            reasoning.status === 'timeout_fallback' &&
+              'bg-amber-50 text-amber-700 border-amber-200',
+            reasoning.status === 'error' &&
+              'bg-rose-50 text-rose-700 border-rose-200'
+          )}
+        >
+          {reasoning.status}
         </span>
+      </div>
 
-        {/* Workers invoked */}
-        {workerNames.length > 0 && (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-muted text-ink-secondary border border-surface-border">
-            <Users size={12} />
-            <span>Workers: {workerNames.join(', ')}</span>
+      {/* Query asked */}
+      <div className="p-3.5 rounded-2xl bg-blue-50/40 border border-blue-100">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 block mb-1">
+          Trigger Question
+        </span>
+        <p className="text-xs font-medium text-slate-900 leading-relaxed">
+          &ldquo;{reasoning.question}&rdquo;
+        </p>
+      </div>
+
+      {/* Synthesized Answer */}
+      <div>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+          Synthesized Answer
+        </span>
+        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 text-xs text-slate-800 leading-relaxed whitespace-pre-line">
+          {displayedAnswer}
+        </div>
+      </div>
+
+      {/* Workers and Timings */}
+      <div className="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100 pt-3">
+        <span className="flex items-center gap-1">
+          <Sparkles size={11} className="text-orange-500" />
+          <span>Agents: {workersCount} Lyzr Workers</span>
+        </span>
+        {reasoning.timestamp && (
+          <span className="flex items-center gap-1 text-[10px] text-slate-400">
+            <Clock size={10} />
+            <span>{new Date(reasoning.timestamp).toLocaleTimeString()}</span>
           </span>
         )}
-
-        {/* Honest Delegation status */}
-        <span
-          className={cn(
-            'inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-xs',
-            delegationInfo.className
-          )}
-          title={delegationInfo.title}
-        >
-          <DelegationIcon size={12} />
-          <span>{delegationInfo.label}</span>
-        </span>
-
-        {/* Notification diagnostics */}
-        <span
-          className={cn(
-            'inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-xs',
-            notifInfo.className
-          )}
-          title={notifInfo.detail || undefined}
-        >
-          <Bell size={12} />
-          <span>{notifInfo.label}</span>
-          {notifInfo.detail && (
-            <span className="hidden sm:inline opacity-75 font-normal">
-              · {notifInfo.detail}
-            </span>
-          )}
-        </span>
       </div>
 
-      {/* Execution trace dropdown */}
-      {trace.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-surface-border">
-          <button
-            onClick={() => setShowTrace(!showTrace)}
-            className="flex items-center justify-between w-full text-xs font-medium text-ink-secondary hover:text-ink-primary transition-colors py-1"
-          >
-            <span>Agent Execution Trace ({trace.length} steps)</span>
-            {showTrace ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
+      {/* Collapsible Trace toggle */}
+      <button
+        onClick={() => setShowTrace(!showTrace)}
+        className="w-full flex items-center justify-between text-xs font-semibold text-slate-600 hover:text-slate-900 pt-2 border-t border-slate-100 transition-colors"
+      >
+        <span>Agent Trace Details</span>
+        {showTrace ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+      </button>
 
-          {showTrace && (
-            <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto p-2 rounded-lg bg-surface-muted/40 border border-surface-border text-xs font-mono">
-              {trace.map((step, idx) => (
-                <div key={idx} className="flex items-start gap-2 py-1 border-b border-surface-border/50 last:border-b-0">
-                  <span className="text-ink-muted shrink-0">#{idx + 1}</span>
-                  <span className="text-accent-blue font-semibold">{step.agent || 'agent'}</span>
-                  <span className="text-ink-muted">→</span>
-                  <span className="text-ink-secondary">{step.action || 'action'}</span>
-                  {step.target && (
-                    <span className="text-accent-peach">({step.target})</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+      {showTrace && (
+        <div className="p-3 rounded-xl bg-slate-900 text-slate-200 font-mono text-[10px] overflow-x-auto max-h-48">
+          <pre>{JSON.stringify(reasoning, null, 2)}</pre>
         </div>
       )}
     </div>

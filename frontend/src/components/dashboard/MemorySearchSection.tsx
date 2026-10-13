@@ -1,9 +1,25 @@
 import React, { useState } from 'react';
-import { Search, Loader2, X, Sparkles, AlertCircle, Calendar, Tag } from 'lucide-react';
+import { Search, Loader2, X, Sparkles, Calendar, Tag, CheckCircle2 } from 'lucide-react';
 import { MemorySearchResult } from '../../types/api';
 import { api, ApiError } from '../../services/api';
 
-export const MemorySearchSection: React.FC = () => {
+const DEFAULT_SUGGESTIONS = [
+  'flights to SF',
+  'MSF class',
+  'grocery list',
+  'project ideas',
+  'hackathon',
+  'meetings',
+  'reminders',
+];
+
+interface MemorySearchSectionProps {
+  onSearchResultSelect?: (result: MemorySearchResult) => void;
+}
+
+export const MemorySearchSection: React.FC<MemorySearchSectionProps> = ({
+  onSearchResultSelect,
+}) => {
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState(5);
   const [isSearching, setIsSearching] = useState(false);
@@ -11,16 +27,15 @@ export const MemorySearchSection: React.FC = () => {
   const [lastExecutedQuery, setLastExecutedQuery] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  const handleSearch = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const trimmed = query.trim();
+  const performSearch = async (searchQuery: string, searchLimit: number) => {
+    const trimmed = searchQuery.trim();
     if (!trimmed) return;
 
     setIsSearching(true);
     setError(null);
 
     try {
-      const response = await api.searchMemories(trimmed, limit);
+      const response = await api.searchMemories(trimmed, searchLimit);
       setResults(response.results);
       setLastExecutedQuery(trimmed);
     } catch (err) {
@@ -37,6 +52,16 @@ export const MemorySearchSection: React.FC = () => {
     }
   };
 
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    performSearch(query, limit);
+  };
+
+  const handleChipClick = (suggestion: string) => {
+    setQuery(suggestion);
+    performSearch(suggestion, limit);
+  };
+
   const handleClear = () => {
     setQuery('');
     setResults(null);
@@ -45,156 +70,168 @@ export const MemorySearchSection: React.FC = () => {
   };
 
   return (
-    <div className="p-5 rounded-xl border border-surface-border bg-white shadow-card">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-accent-blue/10 border border-accent-blue/20 flex items-center justify-center">
-            <Search size={14} className="text-accent-blue" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-ink-primary">Semantic Memory Search</h3>
-            <p className="text-[11px] text-ink-muted">
-              FastEmbed vector similarity via Qdrant · Demo identity scoped
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-b from-blue-50/80 via-blue-50/30 to-white p-6 sm:p-8 text-center shadow-2xs">
+      {/* Title & Subtitle */}
+      <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+        Search Your <span className="text-blue-600">Memories</span>
+      </h1>
+      <p className="mt-1.5 text-xs sm:text-sm text-slate-500">
+        Find anything from your conversations using natural language.
+      </p>
 
-      {/* Search Input Form */}
-      <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2.5 mt-3">
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search memories by natural meaning (e.g. 'flight details', 'exam schedule')..."
-            className="w-full pl-9 pr-8 py-2 text-xs rounded-lg border border-surface-border bg-surface-hover/30 text-ink-primary placeholder:text-ink-muted focus:outline-none focus:ring-1 focus:ring-accent-blue focus:border-accent-blue transition-colors"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={handleClear}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink-primary p-0.5"
-              aria-label="Clear search"
-            >
-              <X size={13} />
-            </button>
-          )}
-        </div>
+      {/* Main Search Input Form */}
+      <form
+        onSubmit={handleFormSubmit}
+        className="mt-6 max-w-3xl mx-auto flex items-center gap-2 bg-white border border-slate-200/90 rounded-2xl p-2 sm:p-2.5 shadow-sm focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all"
+      >
+        <Search size={18} className="text-blue-600 ml-2.5 shrink-0" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder='Search memories (e.g. "flights to SF", "MSF class", "grocery list")'
+          className="flex-1 bg-transparent px-2.5 py-1 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none"
+        />
 
-        <div className="flex items-center gap-2">
-          <select
-            value={limit}
-            onChange={(e) => setLimit(Number(e.target.value))}
-            className="px-2.5 py-2 text-xs rounded-lg border border-surface-border bg-white text-ink-secondary focus:outline-none focus:border-accent-blue"
-            title="Max results to retrieve"
-          >
-            <option value={5}>Top 5</option>
-            <option value={10}>Top 10</option>
-            <option value={20}>Top 20</option>
-          </select>
-
+        {query && (
           <button
-            type="submit"
-            disabled={isSearching || !query.trim()}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-ink-primary text-canvas text-xs font-medium hover:bg-ink-secondary disabled:opacity-50 transition-colors shrink-0"
+            type="button"
+            onClick={handleClear}
+            className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            title="Clear search query"
           >
-            {isSearching ? (
-              <>
-                <Loader2 size={13} className="animate-spin" />
-                <span>Searching...</span>
-              </>
-            ) : (
-              <span>Search</span>
-            )}
+            <X size={14} />
           </button>
-        </div>
+        )}
+
+        <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block" />
+
+        {/* Limit Dropdown */}
+        <select
+          value={limit}
+          onChange={(e) => {
+            const newLimit = Number(e.target.value);
+            setLimit(newLimit);
+            if (lastExecutedQuery) {
+              performSearch(lastExecutedQuery, newLimit);
+            }
+          }}
+          className="bg-transparent border-0 text-xs font-semibold text-slate-600 focus:outline-none px-2 py-1 cursor-pointer hover:text-slate-900"
+          title="Number of results"
+        >
+          <option value={3}>Top 3</option>
+          <option value={5}>Top 5</option>
+          <option value={10}>Top 10</option>
+        </select>
+
+        {/* Submit Search Button */}
+        <button
+          type="submit"
+          disabled={isSearching || !query.trim()}
+          className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-colors disabled:opacity-50 shadow-xs cursor-pointer shrink-0"
+        >
+          {isSearching ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <Search size={16} />
+          )}
+          <span>Search</span>
+        </button>
       </form>
 
-      {/* Error state */}
+      {/* Query Suggestion Chips */}
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto">
+        {DEFAULT_SUGGESTIONS.map((suggestion) => (
+          <button
+            key={suggestion}
+            type="button"
+            onClick={() => handleChipClick(suggestion)}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs text-slate-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/50 transition-all shadow-2xs cursor-pointer"
+          >
+            <Search size={11} className="text-slate-400" />
+            <span>{suggestion}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Error Message */}
       {error && (
-        <div className="mt-4 p-3 rounded-lg border border-rose-200 bg-rose-50 text-xs text-rose-800 flex items-start gap-2">
-          <AlertCircle size={14} className="shrink-0 mt-0.5 text-rose-600" />
-          <div className="flex-1">
-            <p className="font-medium">Search error</p>
-            <p className="mt-0.5 text-[11px]">{error}</p>
-          </div>
+        <div className="mt-4 max-w-2xl mx-auto p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 text-left">
+          {error}
         </div>
       )}
 
-      {/* Results View */}
-      {results !== null && !error && (
-        <div className="mt-4 pt-3 border-t border-surface-border">
-          <div className="flex items-center justify-between mb-3 text-xs text-ink-muted">
-            <span>
-              {results.length} {results.length === 1 ? 'match' : 'matches'} for "{lastExecutedQuery}"
-            </span>
+      {/* Search Results Expansion */}
+      {results !== null && (
+        <div className="mt-6 text-left max-w-3xl mx-auto border-t border-blue-100/80 pt-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles size={15} className="text-blue-600" />
+              <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+                Retrieved {results.length} semantic matches for &ldquo;{lastExecutedQuery}&rdquo;
+              </h3>
+            </div>
             <button
               onClick={handleClear}
-              className="text-xs text-ink-muted hover:text-ink-primary underline"
+              className="text-xs text-slate-500 hover:text-slate-800 underline flex items-center gap-1 font-medium"
             >
+              <X size={12} />
               Clear results
             </button>
           </div>
 
           {results.length === 0 ? (
-            <div className="p-4 rounded-lg border border-dashed border-surface-border text-center bg-surface-muted/10">
-              <p className="text-xs text-ink-secondary">
-                No semantic matches found for "{lastExecutedQuery}".
-              </p>
-              <p className="mt-1 text-[11px] text-ink-muted">
-                Try querying with different terms or check if memories exist in your feed.
-              </p>
+            <div className="p-6 rounded-2xl bg-white border border-slate-200 text-center text-xs text-slate-500">
+              No matching memories found in Qdrant for this query. Try another keyword or phrase.
             </div>
           ) : (
             <div className="space-y-2.5">
-              {results.map((item) => {
-                const scorePercent = Math.round(item.score * 100);
-                const source = item.payload?.source || 'unknown';
-                const createdAt = item.payload?.created_at
-                  ? new Date(item.payload.created_at).toLocaleDateString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  : null;
+              {results.map((res) => {
+                const matchPct = Math.round(res.score * 100);
+                const scoreColor =
+                  matchPct >= 70
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : matchPct >= 50
+                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                    : 'bg-slate-100 text-slate-600 border-slate-200';
 
                 return (
                   <div
-                    key={item.id}
-                    className="p-3 rounded-lg border border-surface-border bg-surface-hover/20 hover:border-surface-hover transition-colors"
+                    key={res.id}
+                    onClick={() => onSearchResultSelect?.(res)}
+                    className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-blue-300 hover:shadow-xs transition-all cursor-pointer"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <p className="text-xs font-medium text-ink-primary leading-relaxed flex-1">
-                        {item.text}
+                      <p className="text-xs sm:text-sm font-medium text-slate-900 leading-relaxed flex-1">
+                        {res.text}
                       </p>
-                      {/* Similarity score pill */}
                       <span
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-accent-blue/10 text-accent-blue shrink-0 border border-accent-blue/20"
-                        title={`Cosine Similarity Score: ${item.score.toFixed(4)}`}
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border shrink-0 ${scoreColor}`}
                       >
-                        <Sparkles size={10} />
-                        {scorePercent}% match
+                        <CheckCircle2 size={11} />
+                        {matchPct}% match
                       </span>
                     </div>
 
-                    <div className="mt-2 flex items-center gap-3 text-[10px] text-ink-muted">
-                      <span className="flex items-center gap-1">
-                        <Tag size={10} />
-                        <span className="font-mono">{source}</span>
-                      </span>
-                      {createdAt && (
-                        <span className="flex items-center gap-1">
-                          <Calendar size={10} />
-                          <span>{createdAt}</span>
+                    {res.payload && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-slate-500 border-t border-slate-100 pt-2">
+                        {res.payload.source && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-mono">
+                            <Tag size={9} />
+                            {String(res.payload.source)}
+                          </span>
+                        )}
+                        {res.payload.created_at && (
+                          <span className="inline-flex items-center gap-1">
+                            <Calendar size={10} />
+                            {new Date(String(res.payload.created_at)).toLocaleDateString()}
+                          </span>
+                        )}
+                        <span className="ml-auto font-mono text-[9px] text-slate-400">
+                          ID: {res.id.slice(0, 8)}
                         </span>
-                      )}
-                      <span className="font-mono text-ink-faint truncate max-w-[120px]" title={item.id}>
-                        id: {item.id.slice(0, 8)}...
-                      </span>
-                    </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

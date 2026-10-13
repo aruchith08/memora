@@ -128,7 +128,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-canvas text-ink-primary flex flex-col">
+    <div className="min-h-screen bg-[#FBFBFA] text-slate-900 flex flex-col font-sans">
       {/* Navigation Bar */}
       <DashboardNav
         connectionStatus={connectionStatus}
@@ -137,8 +137,11 @@ export default function DashboardPage() {
       />
 
       {/* Main Content Dashboard */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
-        {/* System Health & Identity Banner */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+        {/* 1. Hero Search Section */}
+        <MemorySearchSection />
+
+        {/* 2. Runtime Environment (3 Horizontal Cards) */}
         <SystemStatusCard
           health={health}
           effectiveUid={effectiveUid}
@@ -147,38 +150,42 @@ export default function DashboardPage() {
           onRetry={handleRefreshAll}
         />
 
-        {/* Top Split Row: Semantic Search & Latest Reasoning */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-          {/* Semantic Search Panel */}
-          <MemorySearchSection />
+        {/* 3. Main Split Row: Left = Recent Voice Memories (8 cols), Right = Latest Reasoning (4 cols) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left: Chronological Recent Memories Feed */}
+          <div className="lg:col-span-8">
+            <MemoryFeedSection
+              memories={memories}
+              count={memoryCount}
+              effectiveUid={effectiveUid}
+              isLoading={isMemoriesLoading}
+              error={memoriesError}
+              limit={memoryLimit}
+              onLimitChange={handleLimitChange}
+              onRefresh={() => loadMemories(memoryLimit)}
+              onDeleteMemory={handleDeleteMemory}
+            />
+          </div>
 
-          {/* Latest Recorded Reasoning Panel */}
-          <ReasoningTraceCard
-            reasoning={reasoning}
-            isLoading={isReasoningLoading}
-            error={reasoningError}
-            onRefresh={loadReasoning}
-          />
+          {/* Right: Latest Recorded Reasoning Panel */}
+          <div className="lg:col-span-4">
+            <ReasoningTraceCard
+              reasoning={reasoning}
+              isLoading={isReasoningLoading}
+              error={reasoningError}
+              onRefresh={loadReasoning}
+              onRunTestQuery={() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+          </div>
         </div>
-
-        {/* Full-width Chronological Recent Memories Feed */}
-        <MemoryFeedSection
-          memories={memories}
-          count={memoryCount}
-          effectiveUid={effectiveUid}
-          isLoading={isMemoriesLoading}
-          error={memoriesError}
-          limit={memoryLimit}
-          onLimitChange={handleLimitChange}
-          onRefresh={() => loadMemories(memoryLimit)}
-          onDeleteMemory={handleDeleteMemory}
-        />
       </main>
 
       {/* Dashboard Footer */}
-      <footer className="border-t border-surface-border py-4 bg-canvas text-center">
-        <p className="text-[11px] text-ink-faint">
-          MEMORA Console · Local vector storage with Lyzr multi-agent reasoning
+      <footer className="border-t border-slate-200/80 py-4 bg-white text-center">
+        <p className="text-[11px] text-slate-400">
+          MEMORA Console &middot; Qdrant Cloud Vector Storage with Lyzr Multi-Agent Reasoning
         </p>
       </footer>
     </div>

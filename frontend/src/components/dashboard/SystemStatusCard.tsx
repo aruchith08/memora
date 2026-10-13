@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, Shield, Server, AlertTriangle } from 'lucide-react';
+import { Database, Shield, Server, AlertTriangle, ChevronRight } from 'lucide-react';
 import { HealthResponse } from '../../types/api';
 
 interface SystemStatusCardProps {
@@ -19,18 +19,17 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
 }) => {
   if (isOffline) {
     return (
-      <div className="p-4 sm:p-5 rounded-xl border border-rose-200 bg-rose-50/70 text-ink-primary shadow-sm">
+      <div className="p-4 sm:p-5 rounded-2xl border border-rose-200 bg-rose-50/70 text-slate-900 shadow-2xs">
         <div className="flex items-start gap-3">
           <AlertTriangle size={18} className="text-rose-600 shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-semibold text-rose-900">Backend Service Offline</h3>
             <p className="mt-1 text-xs text-rose-800 leading-relaxed">
-              Cannot connect to the FastAPI backend at <code className="bg-rose-100 px-1 py-0.5 rounded font-mono text-[11px]">http://127.0.0.1:8000</code>.
-              Ensure the Python backend is running via <code className="bg-rose-100 px-1 py-0.5 rounded font-mono text-[11px]">uvicorn app:app --port 8000</code>.
+              Unable to reach the MEMORA FastAPI service. Check network connectivity or verify backend deployment health.
             </p>
             <button
               onClick={onRetry}
-              className="mt-3 inline-flex items-center px-3 py-1.5 rounded-md bg-rose-700 text-white text-xs font-medium hover:bg-rose-800 transition-colors shadow-xs"
+              className="mt-3 inline-flex items-center px-3 py-1.5 rounded-lg bg-rose-700 text-white text-xs font-medium hover:bg-rose-800 transition-colors shadow-2xs"
             >
               Retry Connection
             </button>
@@ -41,59 +40,77 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
   }
 
   return (
-    <div className="p-4 sm:p-5 rounded-xl border border-surface-border bg-white shadow-card">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider flex items-center gap-1.5">
-          <Server size={14} className="text-accent-blue" />
-          Runtime Environment
-        </h2>
-        {isLoading && (
-          <span className="text-[11px] text-ink-muted animate-pulse">Checking status...</span>
-        )}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* 1. Vector Store Card */}
+      <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs hover:shadow-xs transition-shadow">
+        <div className="flex items-start gap-3.5 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center shrink-0">
+            <Database size={19} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-slate-900">Vector Store</span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Connected
+              </span>
+            </div>
+            <p
+              className="text-xs text-slate-500 font-mono truncate mt-0.5"
+              title={health?.qdrant_mode || 'Checking...'}
+            >
+              {isLoading ? 'Checking...' : health?.qdrant_mode || 'server (Qdrant Cloud)'}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Collection: <span className="font-medium text-slate-600">{health?.collection || 'voice_memory'}</span>
+            </p>
+          </div>
+        </div>
+        <ChevronRight size={18} className="text-slate-300 shrink-0 ml-2" />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Qdrant Mode */}
-        <div className="p-3 rounded-lg border border-surface-border bg-surface-muted/30">
-          <div className="flex items-center gap-2 mb-1">
-            <Database size={14} className="text-ink-secondary" />
-            <span className="text-xs font-medium text-ink-secondary">Vector Store</span>
+      {/* 2. Identity Scope Card */}
+      <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs hover:shadow-xs transition-shadow">
+        <div className="flex items-start gap-3.5 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+            <Shield size={19} />
           </div>
-          <p className="text-xs font-mono font-medium text-ink-primary truncate" title={health?.qdrant_mode || 'Checking...'}>
-            {isLoading ? 'Loading...' : health?.qdrant_mode || 'Unavailable'}
-          </p>
-          <p className="mt-1 text-[10px] text-ink-muted">
-            Collection: <span className="font-mono text-ink-secondary">{health?.collection || 'voice_memory'}</span>
-          </p>
+          <div className="min-w-0">
+            <span className="text-sm font-semibold text-slate-900">Identity Scope</span>
+            <p
+              className="text-xs font-bold text-slate-800 font-mono truncate mt-0.5"
+              title={effectiveUid || 'memora_demo_user'}
+            >
+              {isLoading ? 'Resolving...' : effectiveUid || 'memora_demo_user'}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Demo partition (non-production boundary)
+            </p>
+          </div>
         </div>
+        <ChevronRight size={18} className="text-slate-300 shrink-0 ml-2" />
+      </div>
 
-        {/* Demo Identity Scoping */}
-        <div className="p-3 rounded-lg border border-surface-border bg-surface-muted/30">
-          <div className="flex items-center gap-2 mb-1">
-            <Shield size={14} className="text-ink-secondary" />
-            <span className="text-xs font-medium text-ink-secondary">Identity Scope</span>
+      {/* 3. Backend App Card */}
+      <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs hover:shadow-xs transition-shadow">
+        <div className="flex items-start gap-3.5 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+            <Server size={19} />
           </div>
-          <p className="text-xs font-mono font-medium text-ink-primary truncate" title={effectiveUid || 'default_user'}>
-            {isLoading ? 'Resolving...' : effectiveUid || 'default_user'}
-          </p>
-          <p className="mt-1 text-[10px] text-ink-muted">
-            Demo partition (non-production boundary)
-          </p>
-        </div>
-
-        {/* Service Architecture */}
-        <div className="p-3 rounded-lg border border-surface-border bg-surface-muted/30">
-          <div className="flex items-center gap-2 mb-1">
-            <Server size={14} className="text-ink-secondary" />
-            <span className="text-xs font-medium text-ink-secondary">Backend App</span>
+          <div className="min-w-0">
+            <span className="text-sm font-semibold text-slate-900">Backend App</span>
+            <p className="text-xs font-bold text-slate-800 truncate mt-0.5">
+              {health?.app || 'MEMORA Backend'}
+            </p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Healthy
+              </span>
+            </div>
           </div>
-          <p className="text-xs font-medium text-ink-primary truncate">
-            {health?.app || 'MEMORA Backend'}
-          </p>
-          <p className="mt-1 text-[10px] text-ink-muted">
-            Status: <span className="text-emerald-700 font-medium">Healthy</span>
-          </p>
         </div>
+        <ChevronRight size={18} className="text-slate-300 shrink-0 ml-2" />
       </div>
     </div>
   );

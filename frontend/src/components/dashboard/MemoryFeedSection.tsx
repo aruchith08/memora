@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, RefreshCw, Calendar, Tag, AlertCircle, Trash2, Loader2 } from 'lucide-react';
+import { FileText, RefreshCw, Calendar, Tag, AlertCircle, Trash2, Loader2, MessageSquare, Search } from 'lucide-react';
 import { MemoryItem } from '../../types/api';
 import { cn } from '../../lib/utils';
 
@@ -37,27 +37,27 @@ export const MemoryFeedSection: React.FC<MemoryFeedSectionProps> = ({
     : memories;
 
   return (
-    <div className="p-5 rounded-xl border border-surface-border bg-white shadow-card">
+    <div className="p-5 sm:p-6 rounded-3xl border border-slate-200/90 bg-white shadow-2xs">
       {/* Section Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-surface-border">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-accent-peach/10 border border-accent-peach/20 flex items-center justify-center">
-            <Database size={14} className="text-accent-peach" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-orange-50 text-orange-500 border border-orange-100 flex items-center justify-center shrink-0">
+            <FileText size={18} />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-ink-primary">Recent Voice Memories</h3>
-            <p className="text-[11px] text-ink-muted">
+            <h3 className="text-sm font-bold text-slate-900">Recent Voice Memories</h3>
+            <p className="text-[11px] text-slate-400">
               Descending chronological timeline from Qdrant vector store
             </p>
           </div>
         </div>
 
-        {/* Controls */}
+        {/* Header Controls */}
         <div className="flex items-center gap-2 shrink-0">
           <select
             value={limit}
             onChange={(e) => onLimitChange(Number(e.target.value))}
-            className="px-2.5 py-1.5 text-xs rounded-md border border-surface-border bg-white text-ink-secondary focus:outline-none focus:border-accent-blue"
+            className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-700 focus:outline-none focus:border-blue-400 cursor-pointer shadow-2xs"
             title="Max records to retrieve"
           >
             <option value={10}>Latest 10</option>
@@ -68,30 +68,31 @@ export const MemoryFeedSection: React.FC<MemoryFeedSectionProps> = ({
           <button
             onClick={onRefresh}
             disabled={isLoading}
-            className="p-1.5 rounded-md border border-surface-border bg-white text-ink-secondary hover:text-ink-primary hover:border-surface-hover disabled:opacity-50 transition-colors"
+            className="p-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-2xs"
             title="Refresh memories feed"
           >
-            <RefreshCw size={13} className={cn(isLoading && 'animate-spin text-accent-blue')} />
+            <RefreshCw size={13} className={cn(isLoading && 'animate-spin text-blue-600')} />
           </button>
         </div>
       </div>
 
-      {/* Quick local text filter */}
-      {memories.length > 5 && (
-        <div className="mt-3">
+      {/* Quick local search / filter */}
+      {memories.length > 3 && (
+        <div className="mt-3.5 relative">
+          <Search size={13} className="absolute left-3 top-2.5 text-slate-400" />
           <input
             type="text"
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}
-            placeholder="Quick filter on current feed..."
-            className="w-full px-3 py-1.5 text-xs rounded-md border border-surface-border bg-surface-hover/20 text-ink-primary placeholder:text-ink-muted focus:outline-none focus:ring-1 focus:ring-accent-blue focus:border-accent-blue"
+            placeholder="Filter current memories..."
+            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50/60 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:bg-white transition-all"
           />
         </div>
       )}
 
       {/* Error State */}
       {error && (
-        <div className="mt-4 p-4 rounded-lg border border-rose-200 bg-rose-50 text-xs text-rose-800 flex items-start gap-2.5">
+        <div className="mt-4 p-4 rounded-xl border border-rose-200 bg-rose-50 text-xs text-rose-800 flex items-start gap-2.5">
           <AlertCircle size={15} className="shrink-0 mt-0.5 text-rose-600" />
           <div className="flex-1">
             <p className="font-semibold text-rose-900">Failed to load memories</p>
@@ -112,10 +113,10 @@ export const MemoryFeedSection: React.FC<MemoryFeedSectionProps> = ({
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="p-3.5 rounded-lg border border-surface-border bg-surface-muted/30 animate-pulse space-y-2"
+              className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 animate-pulse space-y-2.5"
             >
-              <div className="h-3.5 w-4/5 bg-surface-muted rounded" />
-              <div className="h-2.5 w-1/3 bg-surface-muted rounded" />
+              <div className="h-4 w-4/5 bg-slate-200/80 rounded" />
+              <div className="h-3 w-1/3 bg-slate-200/60 rounded" />
             </div>
           ))}
         </div>
@@ -123,27 +124,27 @@ export const MemoryFeedSection: React.FC<MemoryFeedSectionProps> = ({
 
       {/* Empty State */}
       {!isLoading && !error && memories.length === 0 && (
-        <div className="mt-4 p-8 rounded-lg border border-dashed border-surface-border text-center bg-surface-muted/10">
-          <div className="w-10 h-10 rounded-xl bg-surface-muted border border-surface-border mx-auto flex items-center justify-center mb-3">
-            <Database size={18} className="text-ink-muted" />
+        <div className="mt-4 p-8 rounded-2xl border border-dashed border-slate-200 text-center bg-slate-50/50">
+          <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 mx-auto flex items-center justify-center mb-2.5 shadow-2xs">
+            <FileText size={18} className="text-slate-400" />
           </div>
-          <h4 className="text-xs font-semibold text-ink-primary">No memories recorded yet</h4>
-          <p className="mt-1 text-xs text-ink-muted max-w-sm mx-auto leading-relaxed">
-            Conversation transcripts sent by Omi devices via webhook will be embedded with FastEmbed and indexed in your local Qdrant collection.
+          <h4 className="text-xs font-bold text-slate-800">No memories recorded yet</h4>
+          <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+            Conversation transcripts received via Omi or demo seed will be embedded with FastEmbed and stored in Qdrant Cloud.
           </p>
         </div>
       )}
 
-      {/* Populated Feed */}
+      {/* Populated Feed List */}
       {!isLoading && !error && memories.length > 0 && (
-        <div className="mt-4 space-y-2.5">
-          <div className="flex items-center justify-between text-[11px] text-ink-muted pb-1">
+        <div className="mt-4 space-y-3">
+          <div className="flex items-center justify-between text-[11px] text-slate-400 pb-0.5">
             <span>
-              Showing {displayedMemories.length} of {count} retrieved records
+              Showing {displayedMemories.length} of {count} memories
             </span>
             {effectiveUid && (
               <span className="font-mono text-[10px]">
-                uid: {effectiveUid}
+                scope: {effectiveUid}
               </span>
             )}
           </div>
@@ -156,42 +157,54 @@ export const MemoryFeedSection: React.FC<MemoryFeedSectionProps> = ({
                   hour: '2-digit',
                   minute: '2-digit',
                 })
-              : 'Unknown date';
+              : 'Recent';
+
+            // Extract tags or fallback
+            const tags =
+              mem.metadata && typeof mem.metadata.tags === 'string'
+                ? mem.metadata.tags
+                : mem.metadata && Array.isArray(mem.metadata.tags)
+                ? mem.metadata.tags.join(', ')
+                : null;
 
             return (
               <div
                 key={mem.id}
-                className="p-3.5 rounded-lg border border-surface-border bg-white hover:border-surface-hover hover:shadow-xs transition-all"
+                className="p-4 rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 hover:shadow-xs transition-all group"
               >
-                <p className="text-xs font-normal text-ink-primary leading-relaxed">
+                {/* Main Text */}
+                <p className="text-xs sm:text-sm font-medium text-slate-900 leading-relaxed">
                   {mem.text}
                 </p>
 
-                <div className="mt-2.5 flex flex-wrap items-center gap-2.5 text-[10px] text-ink-muted border-t border-surface-border/50 pt-2">
-                  {/* Source tag */}
-                  <span className="inline-flex items-center gap-1 font-mono px-1.5 py-0.5 rounded bg-surface-muted text-ink-secondary border border-surface-border">
-                    <Tag size={9} />
-                    <span>{mem.source || 'voice'}</span>
+                {/* Bottom Meta Row */}
+                <div className="mt-3 flex flex-wrap items-center gap-2.5 text-[11px] text-slate-500 pt-2 border-t border-slate-100">
+                  {/* Conversation Source Pill */}
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium text-[11px]">
+                    <MessageSquare size={11} className="text-slate-400" />
+                    <span>{mem.source || 'conversation'}</span>
                   </span>
 
                   {/* Timestamp */}
-                  <span className="inline-flex items-center gap-1 text-ink-muted">
-                    <Calendar size={10} />
+                  <span className="inline-flex items-center gap-1 text-slate-500">
+                    <Calendar size={11} className="text-slate-400" />
                     <span>{formattedDate}</span>
                   </span>
 
-                  {/* Safe metadata keys preview if present */}
-                  {mem.metadata && Object.keys(mem.metadata).length > 0 && (
-                    <span className="text-[10px] text-ink-faint truncate max-w-[200px]" title={JSON.stringify(mem.metadata)}>
-                      meta: {Object.entries(mem.metadata).map(([k, v]) => `${k}=${v}`).join(', ')}
+                  {/* Tags */}
+                  {tags && (
+                    <span className="inline-flex items-center gap-1 text-slate-500 truncate max-w-[200px]" title={tags}>
+                      <Tag size={11} className="text-slate-400" />
+                      <span>{tags}</span>
                     </span>
                   )}
 
-                  {/* Memory ID hash & Forget Button */}
+                  {/* ID & Forget Action Button */}
                   <div className="ml-auto flex items-center gap-2">
-                    <span className="font-mono text-[9px] text-ink-faint" title={mem.id}>
-                      {mem.id.slice(0, 8)}
+                    <span className="font-mono text-[10px] text-slate-400" title={mem.id}>
+                      #{mem.id.slice(0, 6)}
                     </span>
+
                     {onDeleteMemory && (
                       <button
                         onClick={async () => {
@@ -205,13 +218,13 @@ export const MemoryFeedSection: React.FC<MemoryFeedSectionProps> = ({
                           }
                         }}
                         disabled={deletingId === mem.id}
-                        className="p-1 rounded text-ink-muted hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50"
-                        title="Forget this memory"
+                        className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50"
+                        title="Forget this memory (Right to be Forgotten)"
                       >
                         {deletingId === mem.id ? (
-                          <Loader2 size={11} className="animate-spin text-rose-500" />
+                          <Loader2 size={12} className="animate-spin text-rose-500" />
                         ) : (
-                          <Trash2 size={11} />
+                          <Trash2 size={12} />
                         )}
                       </button>
                     )}
