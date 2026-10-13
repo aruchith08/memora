@@ -26,7 +26,7 @@ def get_lyzr_config() -> Dict[str, str]:
     Raises ValueError if required configurations are missing.
     """
     api_key = os.getenv("LYZR_API_KEY", "").strip()
-    agent_id = os.getenv("LYZR_AGENT_ID", "").strip()
+    agent_id = os.getenv("LYZR_AGENT_ID", "").strip() or os.getenv("LYZR_MANAGER_AGENT_ID", "").strip()
     action_planner_agent_id = os.getenv("LYZR_ACTION_PLANNER_AGENT_ID", "6ac7eba918b1643ee32dad1d").strip()
     api_url = os.getenv("LYZR_API_URL", DEFAULT_LYZR_URL).strip() or DEFAULT_LYZR_URL
 
@@ -49,7 +49,7 @@ def get_lyzr_manager_config() -> Dict[str, str]:
     Raises ValueError if required configurations are missing.
     """
     api_key = os.getenv("LYZR_API_KEY", "").strip()
-    manager_agent_id = os.getenv("LYZR_MANAGER_AGENT_ID", "").strip()
+    manager_agent_id = os.getenv("LYZR_MANAGER_AGENT_ID", "").strip() or os.getenv("LYZR_AGENT_ID", "").strip()
     api_url = os.getenv("LYZR_API_URL", DEFAULT_LYZR_URL).strip() or DEFAULT_LYZR_URL
 
     if not api_key:
