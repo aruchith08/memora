@@ -8,6 +8,10 @@
 [![Lyzr Agent Studio](https://img.shields.io/badge/Orchestrator-Lyzr%20Agent%20Studio-orange)](https://studio.lyzr.ai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 
+<p align="center">
+  <img src="docs/images/memora-landing.png" alt="MEMORA — Voice-Powered Autonomous Memory Assistant" width="100%" />
+</p>
+
 ---
 
 ## 1. Project Overview
