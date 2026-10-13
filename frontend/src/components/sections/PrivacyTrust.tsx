@@ -15,9 +15,9 @@ const pillars = [
   },
   {
     icon: <Lock size={20} strokeWidth={1.5} className="text-ink-secondary" />,
-    title: 'Cryptographic tenant isolation',
+    title: 'Server-enforced tenant-scoped memories',
     description:
-      'Memories are partitioned by unique user credentials with server-side HNSW filtering, guaranteeing complete tenant isolation and zero cross-user vector retrieval.',
+      'Memories are partitioned by user identifier and filtered server-side in Qdrant to prevent cross-user retrieval. This is an application-level prototype boundary, not an enterprise security certification.',
   },
 ];
 
@@ -54,7 +54,7 @@ export default function PrivacyTrust() {
         {/* Security policy */}
         <div className="mt-12 p-4 rounded-xl border border-surface-border bg-surface-muted/60">
           <p className="text-xs text-ink-muted leading-relaxed">
-            <span className="font-semibold text-ink-secondary">Sovereign Architecture:</span> MEMORA enforces zero-knowledge ambient retention policies. All vector payloads are scoped to the active tenant ID with instant permanent deletion (right to forget) enforced directly at the vector database layer.
+            <span className="font-semibold text-ink-secondary">Architecture:</span> MEMORA stores memories in user-scoped Qdrant collections. Local and cloud-backed Qdrant deployments are supported with instant permanent deletion (right to forget) enforced directly at the vector database layer.
           </p>
         </div>
       </div>

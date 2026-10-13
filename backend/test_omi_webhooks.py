@@ -78,6 +78,30 @@ def run_omi_tests():
     assert resp_rt.json()["status"] == "ok"
     print("[OK] POST /omi/realtime succeeded.")
 
+    # 2b. Test 3-Second Real-Time Buffering (Workshop Cell 41)
+    print("\n[TEST 2b] Testing 3-second realtime buffering & session flushing (Cell 41)...")
+    buffer_sess = "sess_buffered_42"
+    resp_chunk1 = client.post(
+        f"/omi/realtime?uid={user_id_1}&session_id={buffer_sess}&buffer=1",
+        json=[{"text": "Keycard access code for server room"}]
+    )
+    assert resp_chunk1.status_code == 200
+    resp_chunk2 = client.post(
+        f"/omi/realtime?uid={user_id_1}&session_id={buffer_sess}&buffer=1",
+        json=[{"text": "is entered as 8821 on the keypad."}]
+    )
+    assert resp_chunk2.status_code == 200
+    # Flush session buffer explicitly
+    resp_flush = client.post(f"/omi/realtime/flush?uid={user_id_1}&session_id={buffer_sess}")
+    assert resp_flush.status_code == 200
+    assert resp_flush.json()["status"] == "ok"
+    # Verify concatenated memory retrieved
+    buf_res = retrieve_memories(question="server room keypad keycard", uid=user_id_1, limit=1)
+    assert len(buf_res) > 0
+    assert "8821" in buf_res[0]["text"]
+    assert "server room" in buf_res[0]["text"]
+    print("[OK] Workshop Cell 41 realtime buffering and consolidation verified.")
+
     # 3. Test Retrieval with UID Filter
     print("\n[TEST 3] Testing semantic retrieval filtered by uid...")
     query = "What is the WiFi password for the conference room?"

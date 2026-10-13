@@ -48,7 +48,7 @@ export default function GetStartedPage() {
     {
       step: '04',
       title: 'Real-Time Console Intelligence',
-      badge: 'Production Ready',
+      badge: 'Live Prototype',
       badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-200',
       icon: <Sparkles size={18} className="text-emerald-600" />,
       description:

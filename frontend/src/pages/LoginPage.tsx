@@ -45,13 +45,13 @@ export default function LoginPage() {
             <div className="p-4 rounded-xl border border-surface-border bg-surface-muted/40 space-y-2.5">
               <div className="flex items-center gap-2 text-xs font-semibold text-ink-primary">
                 <Info size={14} className="text-accent-blue shrink-0" />
-                <span>Secure Tenant Workspace</span>
+                <span>Demo Tenant Workspace</span>
               </div>
               <p className="text-xs text-ink-secondary leading-relaxed">
-                Direct authentication enabled. Your personal memory partition is isolated in Qdrant Cloud with sovereign zero-knowledge vector encryption.
+                Direct session enabled. Voice memories are partitioned by user identifier and stored in a configured Qdrant collection with server-side payload filtering.
               </p>
               <div className="pt-2 border-t border-surface-border/60 text-[11px] text-ink-muted leading-relaxed">
-                Active session scopes queries to your authenticated tenant partition. All vector operations and Lyzr multi-agent runs operate under end-to-end audit security.
+                Queries are scoped to your active user identifier, ensuring isolated memory retrieval and observable Lyzr multi-agent analysis.
               </div>
             </div>
 

@@ -143,41 +143,87 @@ export const ReasoningTraceCard: React.FC<ReasoningTraceCardProps> = ({
 
       {/* Query asked */}
       <div className="p-3.5 rounded-2xl bg-blue-50/40 border border-blue-100">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 block mb-1">
-          Trigger Question
-        </span>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 block">
+            Trigger Question
+          </span>
+          {reasoning.orchestration_mode && (
+            <span className="text-[10px] text-slate-400 font-mono">
+              mode: {reasoning.orchestration_mode}
+            </span>
+          )}
+        </div>
         <p className="text-xs font-medium text-slate-900 leading-relaxed">
           &ldquo;{reasoning.question}&rdquo;
         </p>
       </div>
 
-      {/* Pipeline Execution Summary Grid */}
-      <div className="grid grid-cols-2 gap-2 text-[11px]">
-        <div className="flex items-center gap-1.5 p-2 rounded-xl bg-purple-50/70 border border-purple-100 text-purple-900">
-          <Database size={12} className="text-purple-600 shrink-0" />
-          <span className="truncate">
-            Qdrant: {reasoning.retrieved_memory_count ?? 1} memory
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 p-2 rounded-xl bg-blue-50/70 border border-blue-100 text-blue-900">
-          <Brain size={12} className="text-blue-600 shrink-0" />
-          <span className="truncate">
-            Reasoner: Done
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 p-2 rounded-xl bg-orange-50/70 border border-orange-100 text-orange-900">
-          <Zap size={12} className="text-orange-600 shrink-0" />
-          <span className="truncate">
-            Planner: Done
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 p-2 rounded-xl bg-emerald-50/70 border border-emerald-100 text-emerald-900">
-          <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
-          <span className="truncate">
-            Omi Alert: Sent
-          </span>
-        </div>
-      </div>
+      {/* Pipeline Execution Summary Grid (Data-driven) */}
+      {(() => {
+        const memCount = typeof reasoning.retrieved_memory_count === 'number'
+          ? reasoning.retrieved_memory_count
+          : (Array.isArray(reasoning.retrieved_memory_ids) ? reasoning.retrieved_memory_ids.length : 0);
+
+        const isCompleted = reasoning.status === 'success' || reasoning.processing_status === 'completed' || reasoning.event_status === 'processed' || !!reasoning.manager_answer || !!reasoning.lyzr_answer;
+        const isError = reasoning.status === 'error' || reasoning.processing_status === 'error' || !!reasoning.error;
+
+        // Dynamic Reasoner Status
+        const reasonerLabel = isCompleted ? 'Reasoner: Done' : isError ? 'Reasoner: Failed' : 'Reasoner: In Progress';
+        const reasonerClass = isCompleted ? 'bg-blue-50/70 border-blue-100 text-blue-900' : isError ? 'bg-rose-50/70 border-rose-100 text-rose-900' : 'bg-slate-50 border-slate-200 text-slate-700';
+
+        // Dynamic Action Planner Status
+        const hasPlanner = Array.isArray(reasoning.workers_invoked)
+          ? reasoning.workers_invoked.some(w => typeof w === 'string' ? w.toLowerCase().includes('planner') : (w.agent_name?.toLowerCase().includes('planner') || false))
+          : (reasoning.orchestration_mode?.includes('sequential') || isCompleted);
+        const plannerLabel = hasPlanner
+          ? (isCompleted ? 'Planner: Done' : isError ? 'Planner: Failed' : 'Planner: Pending')
+          : 'Planner: Not Invoked';
+        const plannerClass = hasPlanner && isCompleted
+          ? 'bg-orange-50/70 border-orange-100 text-orange-900'
+          : hasPlanner && isError
+          ? 'bg-rose-50/70 border-rose-100 text-rose-900'
+          : 'bg-slate-50 border-slate-200 text-slate-600';
+
+        // Dynamic Omi Notification Status
+        const rawNoti = (reasoning.notification_status || '').toLowerCase();
+        const alertLabel = rawNoti === 'sent'
+          ? 'Omi Alert: Sent'
+          : rawNoti === 'failed'
+          ? 'Omi Alert: Failed'
+          : rawNoti === 'attempted'
+          ? 'Omi Alert: Attempted'
+          : 'Omi Alert: Skipped';
+        const alertClass = rawNoti === 'sent'
+          ? 'bg-emerald-50/70 border-emerald-100 text-emerald-900'
+          : rawNoti === 'failed'
+          ? 'bg-rose-50/70 border-rose-100 text-rose-900'
+          : rawNoti === 'attempted'
+          ? 'bg-blue-50/70 border-blue-100 text-blue-900'
+          : 'bg-slate-50 border-slate-200 text-slate-600';
+
+        return (
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="flex items-center gap-1.5 p-2 rounded-xl bg-purple-50/70 border border-purple-100 text-purple-900">
+              <Database size={12} className="text-purple-600 shrink-0" />
+              <span className="truncate">
+                Qdrant: {memCount} {memCount === 1 ? 'memory' : 'memories'}
+              </span>
+            </div>
+            <div className={cn("flex items-center gap-1.5 p-2 rounded-xl border", reasonerClass)}>
+              <Brain size={12} className="text-blue-600 shrink-0" />
+              <span className="truncate">{reasonerLabel}</span>
+            </div>
+            <div className={cn("flex items-center gap-1.5 p-2 rounded-xl border", plannerClass)}>
+              <Zap size={12} className="text-orange-600 shrink-0" />
+              <span className="truncate">{plannerLabel}</span>
+            </div>
+            <div className={cn("flex items-center gap-1.5 p-2 rounded-xl border", alertClass)}>
+              <CheckCircle2 size={12} className={rawNoti === 'sent' ? 'text-emerald-600 shrink-0' : 'text-slate-400 shrink-0'} />
+              <span className="truncate">{alertLabel}</span>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Synthesized Answer */}
       <div>

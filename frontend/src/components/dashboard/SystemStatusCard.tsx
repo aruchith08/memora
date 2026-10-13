@@ -126,7 +126,7 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-semibold text-slate-900">Tenant Scope</span>
               <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/60">
-                Enforced
+                UID Scoped
               </span>
             </div>
             <p
@@ -136,7 +136,7 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
               {isLoading ? 'Resolving...' : (effectiveUid ? effectiveUid.replace('demo_', '') : 'user_active')}
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Private partition (AES-256)
+              Server-enforced partition
             </p>
           </div>
         </div>
