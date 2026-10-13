@@ -179,11 +179,29 @@ export const MemoryFeedSection: React.FC<MemoryFeedSectionProps> = ({
 
                 {/* Bottom Meta Row */}
                 <div className="mt-3 flex flex-wrap items-center gap-2.5 text-[11px] text-slate-500 pt-2 border-t border-slate-100">
-                  {/* Conversation Source Pill */}
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium text-[11px]">
-                    <MessageSquare size={11} className="text-slate-400" />
-                    <span>{mem.source || 'conversation'}</span>
-                  </span>
+                  {/* Differentiated Source Pill */}
+                  {(() => {
+                    const src = (mem.source || (mem.metadata?.source as string) || '').toLowerCase();
+                    const id = (mem.id || '').toLowerCase();
+                    const isSynthetic = id.startsWith('a3b4c5d6') || id.includes('demo') || !!mem.metadata?.synthetic;
+                    const isRealtime = src.includes('realtime') || src.includes('streaming');
+                    const isManual = src.includes('manual') || src.includes('admin');
+
+                    const badge = isSynthetic
+                      ? { label: 'Demo memory', bg: 'bg-purple-50 text-purple-700 border-purple-200/70' }
+                      : isRealtime
+                      ? { label: 'Realtime transcript', bg: 'bg-blue-50 text-blue-700 border-blue-200/70' }
+                      : isManual
+                      ? { label: 'Manual entry', bg: 'bg-slate-100 text-slate-700 border-slate-200/70' }
+                      : { label: 'Omi conversation', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200/70' };
+
+                    return (
+                      <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium text-[10px] border', badge.bg)}>
+                        <MessageSquare size={10} className="opacity-70" />
+                        <span>{badge.label}</span>
+                      </span>
+                    );
+                  })()}
 
                   {/* Timestamp */}
                   <span className="inline-flex items-center gap-1 text-slate-500">

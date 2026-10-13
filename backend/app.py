@@ -1549,6 +1549,11 @@ def get_latest_reasoning_result():
         if os.path.exists(reasoning_file):
             with open(reasoning_file, "r", encoding="utf-8") as f:
                 return json.load(f)
+        # Fallback to packaged file in backend directory on cold starts
+        fallback_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "latest_reasoning_result.json")
+        if os.path.exists(fallback_file):
+            with open(fallback_file, "r", encoding="utf-8") as f:
+                return json.load(f)
     except Exception as e:
         logger.warning(f"Failed to read reasoning record file: {e}")
     return {"status": "none", "message": "No reasoning pipeline executed yet."}

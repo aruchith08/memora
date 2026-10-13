@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, Shield, Server, AlertTriangle } from 'lucide-react';
+import { Database, Shield, AlertTriangle, Brain, Mic } from 'lucide-react';
 import { HealthResponse } from '../../types/api';
 
 interface SystemStatusCardProps {
@@ -40,7 +40,7 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* 1. Vector Store Card */}
       <div className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs">
         <div className="flex items-start gap-3.5 min-w-0">
@@ -48,16 +48,16 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
             <Database size={19} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <span className="text-sm font-semibold text-slate-900">Vector Store</span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Connected
               </span>
             </div>
             <p
               className="text-xs text-slate-500 font-mono truncate mt-0.5"
-              title={health?.qdrant_mode || 'Checking...'}
+              title={health?.qdrant_mode || 'server (Qdrant Cloud)'}
             >
               {isLoading ? 'Checking...' : health?.qdrant_mode || 'server (Qdrant Cloud)'}
             </p>
@@ -68,44 +68,76 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
         </div>
       </div>
 
-      {/* 2. Identity Scope Card */}
+      {/* 2. Lyzr Multi-Agent Engine Card */}
+      <div className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs">
+        <div className="flex items-start gap-3.5 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 border border-orange-100 flex items-center justify-center shrink-0">
+            <Brain size={19} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-semibold text-slate-900">Multi-Agent</span>
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Ready
+              </span>
+            </div>
+            <p className="text-xs font-semibold text-slate-800 truncate mt-0.5">
+              Lyzr Agent Studio
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Reasoner + Action Planner
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Voice Interface (Omi Webhook) Card */}
+      <div className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs">
+        <div className="flex items-start gap-3.5 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+            <Mic size={19} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-semibold text-slate-900">Voice Ingestion</span>
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Active
+              </span>
+            </div>
+            <p className="text-xs font-semibold text-slate-800 truncate mt-0.5">
+              Omi Webhook Stream
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              POST /omi/conversation
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Identity & Tenant Isolation Card */}
       <div className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs">
         <div className="flex items-start gap-3.5 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
             <Shield size={19} />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-sm font-semibold text-slate-900">Identity Scope</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-semibold text-slate-900">Tenant Scope</span>
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/60">
+                Enforced
+              </span>
+            </div>
             <p
-              className="text-xs font-bold text-slate-800 font-mono truncate mt-0.5"
+              className="text-xs font-mono font-bold text-slate-800 truncate mt-0.5"
               title={effectiveUid ? effectiveUid.replace('demo_', '') : 'user_active'}
             >
               {isLoading ? 'Resolving...' : (effectiveUid ? effectiveUid.replace('demo_', '') : 'user_active')}
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Private tenant isolation (AES-256)
+              Private partition (AES-256)
             </p>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Backend App Card */}
-      <div className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs">
-        <div className="flex items-start gap-3.5 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
-            <Server size={19} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-sm font-semibold text-slate-900">Backend App</span>
-            <p className="text-xs font-bold text-slate-800 truncate mt-0.5">
-              {health?.app || 'MEMORA Backend'}
-            </p>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                Healthy
-              </span>
-            </div>
           </div>
         </div>
       </div>

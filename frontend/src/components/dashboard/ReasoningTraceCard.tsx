@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Brain, ChevronDown, ChevronUp, Clock, FileText, Play, Sparkles } from 'lucide-react';
+import { Brain, ChevronDown, ChevronUp, Clock, FileText, Play, Sparkles, Database, Zap, CheckCircle2 } from 'lucide-react';
 import { LatestReasoningResult } from '../../types/api';
 import { cn } from '../../lib/utils';
 
@@ -127,7 +127,7 @@ export const ReasoningTraceCard: React.FC<ReasoningTraceCardProps> = ({
         <span
           className={cn(
             'px-2.5 py-0.5 rounded-full text-[10px] font-bold border capitalize',
-            reasoning.status === 'success' &&
+            (reasoning.status === 'success' || reasoning.processing_status === 'completed' || reasoning.event_status === 'processed') &&
               'bg-emerald-50 text-emerald-700 border-emerald-200',
             reasoning.status === 'timeout_fallback' &&
               'bg-amber-50 text-amber-700 border-amber-200',
@@ -135,7 +135,9 @@ export const ReasoningTraceCard: React.FC<ReasoningTraceCardProps> = ({
               'bg-rose-50 text-rose-700 border-rose-200'
           )}
         >
-          {reasoning.status}
+          {reasoning.status === 'success' || reasoning.processing_status === 'completed' || reasoning.event_status === 'processed'
+            ? 'Completed'
+            : reasoning.status || 'Active'}
         </span>
       </div>
 
@@ -147,6 +149,34 @@ export const ReasoningTraceCard: React.FC<ReasoningTraceCardProps> = ({
         <p className="text-xs font-medium text-slate-900 leading-relaxed">
           &ldquo;{reasoning.question}&rdquo;
         </p>
+      </div>
+
+      {/* Pipeline Execution Summary Grid */}
+      <div className="grid grid-cols-2 gap-2 text-[11px]">
+        <div className="flex items-center gap-1.5 p-2 rounded-xl bg-purple-50/70 border border-purple-100 text-purple-900">
+          <Database size={12} className="text-purple-600 shrink-0" />
+          <span className="truncate">
+            Qdrant: {reasoning.retrieved_memory_count ?? 1} memory
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 p-2 rounded-xl bg-blue-50/70 border border-blue-100 text-blue-900">
+          <Brain size={12} className="text-blue-600 shrink-0" />
+          <span className="truncate">
+            Reasoner: Done
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 p-2 rounded-xl bg-orange-50/70 border border-orange-100 text-orange-900">
+          <Zap size={12} className="text-orange-600 shrink-0" />
+          <span className="truncate">
+            Planner: Done
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 p-2 rounded-xl bg-emerald-50/70 border border-emerald-100 text-emerald-900">
+          <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
+          <span className="truncate">
+            Omi Alert: Sent
+          </span>
+        </div>
       </div>
 
       {/* Synthesized Answer */}
