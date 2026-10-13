@@ -110,7 +110,61 @@ Lyzr powers the autonomous intelligence engine. Rather than relying on simple si
 
 ---
 
-## 6. Complete API Reference
+## 6. Application Codebase & File Structure
+
+The MEMORA repository is organized into distinct, decoupled subsystems for the backend service, vector storage, agent orchestration, frontend client, and documentation:
+
+```text
+memora/
+├── backend/                       # Python FastAPI Backend & Multi-Agent Engine
+│   ├── app.py                     # Main FastAPI application, routing, CORS, and auth gates
+│   ├── lyzr_service.py            # Lyzr Agent Studio integration & sequential reasoning pipeline
+│   ├── lyzr_telemetry.py          # WebSocket client for Lyzr telemetry & event stream auditing
+│   ├── omi_service.py             # Omi webhook payload parsing, transcript extraction & notifications
+│   ├── seed_demo_memories.py      # Demo dataset vector seeding script
+│   ├── test_unified_deployment.py # Comprehensive deployment, security & API test suite (23 tests)
+│   ├── test_collaborative_workflow.py # Lyzr multi-agent orchestration test suite
+│   ├── test_lyzr_service.py       # Lyzr service integration test suite
+│   ├── test_lyzr_telemetry.py     # Lyzr telemetry WebSocket test suite
+│   ├── requirements.txt           # Python backend dependencies
+│   ├── vercel.json                # Vercel Serverless Function routing configuration
+│   └── .env.example               # Template for environment variables
+│
+├── frontend/                      # React 18 + Vite + Tailwind CSS Dashboard SPA
+│   ├── public/                    # Static assets & favicon
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── dashboard/         # MEMORA Console dashboard components
+│   │   │   │   ├── DashboardNav.tsx        # Top navigation & system status badge
+│   │   │   │   ├── SystemStatusCard.tsx    # Runtime service metrics (Omi, Qdrant, Lyzr)
+│   │   │   │   ├── MemorySearchSection.tsx # Semantic vector search bar & prompt chips
+│   │   │   │   ├── MemoryFeedSection.tsx   # Chronological memory feed & forget controls
+│   │   │   │   └── ReasoningTraceCard.tsx  # Lyzr Reasoner & Action Planner audit trace
+│   │   │   ├── layout/            # Global navigation and footer components
+│   │   │   └── sections/          # Landing page sections (Hero, HowItWorks, MultiAgent)
+│   │   ├── pages/
+│   │   │   ├── HomePage.tsx       # Public hero landing page (/)
+│   │   │   └── DashboardPage.tsx  # Interactive memory dashboard (/app)
+│   │   ├── services/
+│   │   │   └── api.ts             # Typed REST API client for backend communication
+│   │   ├── types/
+│   │   │   └── api.ts             # TypeScript interfaces for memories, search & reasoning
+│   │   ├── App.tsx                # Client-side router configuration
+│   │   └── main.tsx               # Application bootstrap
+│   ├── package.json               # Frontend dependencies & build scripts
+│   ├── tailwind.config.js         # Tailwind CSS styling configuration
+│   ├── vite.config.ts             # Vite bundler configuration & local proxy
+│   └── vercel.json                # Single-Page Application rewrites for Vercel
+│
+└── docs/                          # Documentation assets & screenshots
+    └── images/
+        ├── memora-dashboard.png   # Console dashboard screenshot (hero visual)
+        └── memora-landing.png     # Landing page preview
+```
+
+---
+
+## 7. Complete API Reference
 
 All routes are implemented and validated:
 
@@ -129,7 +183,7 @@ All routes are implemented and validated:
 
 ---
 
-## 7. Security, Privacy & Memory Deletion
+## 8. Security, Privacy & Memory Deletion
 
 - **Zero Secret Exposure**: All credentials (`QDRANT_API_KEY`, `LYZR_API_KEY`, `OMI_WEBHOOK_SECRET`, `MEMORA_ADMIN_KEY`) are managed via environment variables and excluded from version control.
 - **Fail-Closed Administrative Gate**: Mutations (`POST /memories`, `DELETE /memories/{id}`, `POST /reason`) fail closed with `401 Unauthorized` in production if `MEMORA_ADMIN_KEY` is not provided.
@@ -139,7 +193,7 @@ All routes are implemented and validated:
 
 ---
 
-## 8. Environment Configuration & Deployment
+## 9. Environment Configuration & Deployment
 
 ### Environment Variables Reference
 
@@ -237,7 +291,7 @@ npm run dev
 
 ---
 
-## 9. Test Results & Verification
+## 10. Test Results & Verification
 
 All automated test suites pass cleanly:
 
