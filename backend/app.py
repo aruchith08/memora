@@ -969,12 +969,12 @@ def on_conversation(
         header_secret=request.headers.get("x-omi-webhook-secret"),
         auth_header=request.headers.get("authorization"),
     )
-    # Fallback uid resolution: query param -> body -> default
+    # Fallback uid resolution: query param -> body -> demo user
     effective_uid = uid
     if not effective_uid and isinstance(payload, dict):
         effective_uid = payload.get("uid") or payload.get("user_id")
     if not effective_uid:
-        effective_uid = "omi_user"
+        effective_uid = get_effective_demo_uid()
 
     logger.info(f"[Omi Webhook] Conversation completed received for uid='{effective_uid}'")
     try:
@@ -1024,18 +1024,35 @@ def on_conversation(
     title = (structured.get("title", "") if isinstance(structured, dict) else "") or ""
     action_items = structured.get("action_items", []) if isinstance(structured, dict) else []
 
-    # Combine overview + transcript text per guide specification
+    # Comprehensive text extraction: combine title + overview + transcript + action items/tasks
     parts = []
-    if overview:
+    if title:
+        parts.append(title.strip())
+    if overview and overview.strip() != title.strip():
         parts.append(overview.strip())
     if transcript:
         parts.append(transcript.strip())
+    if action_items:
+        for item in action_items:
+            if isinstance(item, str) and item.strip():
+                parts.append(f"Task: {item.strip()}")
+            elif isinstance(item, dict):
+                desc = item.get("description") or item.get("text") or item.get("title") or ""
+                if desc and isinstance(desc, str) and desc.strip():
+                    parts.append(f"Task: {desc.strip()}")
 
-    text = " ".join(parts).strip()
+    # Additional fallbacks if payload contains alternative task/content fields
+    if not parts and isinstance(payload, dict):
+        for field in ("text", "content", "summary", "notes", "transcript", "reminder"):
+            val = payload.get(field)
+            if val and isinstance(val, str) and val.strip():
+                parts.append(val.strip())
+                break
+
+    text = " — ".join(p for p in parts if p).strip()
 
     # Determine if the utterance is an explicit question/request
-    # Prefer raw transcript for query evaluation; fallback to overview if transcript is empty
-    candidate_query = transcript or overview
+    candidate_query = transcript or overview or title
     if is_explicit_question(candidate_query):
         logger.info(f"[Omi Webhook] Utterance identified as explicit question: '{candidate_query}'")
         query_metadata = {
@@ -1046,17 +1063,27 @@ def on_conversation(
             "title": title,
             "segment_count": len(segments),
         }
-        # Run Qdrant retrieval + Lyzr reasoning in background task for fast HTTP 200
-        background_tasks.add_task(
-            process_reasoning_pipeline,
-            question=candidate_query,
-            uid=effective_uid,
-            session_id=effective_session_id,
-            store_question_as_memory=True, # stores AFTER retrieval
-            question_metadata=query_metadata,
-        )
+        # Run Qdrant retrieval + Lyzr reasoning
+        try:
+            process_reasoning_pipeline(
+                question=candidate_query,
+                uid=effective_uid,
+                session_id=effective_session_id,
+                store_question_as_memory=True, # stores AFTER retrieval
+                question_metadata=query_metadata,
+            )
+        except Exception as r_err:
+            logger.error(f"[Omi Webhook] Reasoning pipeline error: {r_err}")
+            background_tasks.add_task(
+                process_reasoning_pipeline,
+                question=candidate_query,
+                uid=effective_uid,
+                session_id=effective_session_id,
+                store_question_as_memory=True,
+                question_metadata=query_metadata,
+            )
     elif text:
-        # Normal memory/statement: store as before
+        # Normal memory/statement: store into Qdrant
         metadata = {
             "source": "conversation",
             "uid": effective_uid,
@@ -1066,15 +1093,24 @@ def on_conversation(
             "action_items": action_items,
             "segment_count": len(segments),
         }
-        # Run storage via BackgroundTasks for quick HTTP 200 response
-        background_tasks.add_task(
-            store_memory,
-            text=text,
-            uid=effective_uid,
-            source="conversation",
-            metadata=metadata,
-        )
-        logger.info(f"[Omi Webhook] Queued conversation memory for uid='{effective_uid}' ({len(text)} chars)")
+        # Execute store_memory immediately to ensure persistence before Vercel serverless freeze
+        try:
+            store_memory(
+                text=text,
+                uid=effective_uid,
+                source="conversation",
+                metadata=metadata,
+            )
+            logger.info(f"[Omi Webhook] Successfully stored conversation memory for uid='{effective_uid}' ({len(text)} chars)")
+        except Exception as store_err:
+            logger.error(f"[Omi Webhook] Direct store_memory failed, queueing background task: {store_err}")
+            background_tasks.add_task(
+                store_memory,
+                text=text,
+                uid=effective_uid,
+                source="conversation",
+                metadata=metadata,
+            )
     else:
         logger.warning(f"[Omi Webhook] No non-empty text found in conversation payload for uid='{effective_uid}'")
 
@@ -1115,7 +1151,7 @@ def on_realtime(
     if not effective_uid and isinstance(payload, dict):
         effective_uid = payload.get("uid") or payload.get("user_id")
     if not effective_uid:
-        effective_uid = "omi_user"
+        effective_uid = get_effective_demo_uid()
 
     logger.info(f"[Omi Webhook] Realtime transcript received for uid='{effective_uid}', session_id='{session_id}'")
     effective_session_id = session_id
@@ -1140,14 +1176,23 @@ def on_realtime(
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "segment_count": len(segments),
         }
-        background_tasks.add_task(
-            store_memory,
-            text=text,
-            uid=effective_uid,
-            source="realtime",
-            metadata=metadata,
-        )
-        logger.info(f"[Omi Webhook] Queued realtime memory for uid='{effective_uid}' ({len(text)} chars)")
+        try:
+            store_memory(
+                text=text,
+                uid=effective_uid,
+                source="realtime",
+                metadata=metadata,
+            )
+            logger.info(f"[Omi Webhook] Successfully stored realtime memory for uid='{effective_uid}' ({len(text)} chars)")
+        except Exception as store_err:
+            logger.error(f"[Omi Webhook] Direct store_memory failed, queueing background task: {store_err}")
+            background_tasks.add_task(
+                store_memory,
+                text=text,
+                uid=effective_uid,
+                source="realtime",
+                metadata=metadata,
+            )
     else:
         logger.warning(f"[Omi Webhook] Empty realtime segment text received for uid='{effective_uid}'")
 
