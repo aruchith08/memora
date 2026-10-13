@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, RefreshCw, Calendar, Tag, AlertCircle } from 'lucide-react';
+import { Database, RefreshCw, Calendar, Tag, AlertCircle, Trash2, Loader2 } from 'lucide-react';
 import { MemoryItem } from '../../types/api';
 import { cn } from '../../lib/utils';
 
@@ -12,6 +12,7 @@ interface MemoryFeedSectionProps {
   limit: number;
   onLimitChange: (limit: number) => void;
   onRefresh: () => void;
+  onDeleteMemory?: (id: string) => Promise<void>;
 }
 
 export const MemoryFeedSection: React.FC<MemoryFeedSectionProps> = ({
@@ -23,8 +24,10 @@ export const MemoryFeedSection: React.FC<MemoryFeedSectionProps> = ({
   limit,
   onLimitChange,
   onRefresh,
+  onDeleteMemory,
 }) => {
   const [filterText, setFilterText] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Filter memories locally by text if user types in quick filter
   const displayedMemories = filterText.trim()
@@ -184,10 +187,35 @@ export const MemoryFeedSection: React.FC<MemoryFeedSectionProps> = ({
                     </span>
                   )}
 
-                  {/* Memory ID hash */}
-                  <span className="ml-auto font-mono text-[9px] text-ink-faint" title={mem.id}>
-                    {mem.id.slice(0, 8)}
-                  </span>
+                  {/* Memory ID hash & Forget Button */}
+                  <div className="ml-auto flex items-center gap-2">
+                    <span className="font-mono text-[9px] text-ink-faint" title={mem.id}>
+                      {mem.id.slice(0, 8)}
+                    </span>
+                    {onDeleteMemory && (
+                      <button
+                        onClick={async () => {
+                          if (window.confirm('Forget this memory permanently from Qdrant vector storage?')) {
+                            setDeletingId(mem.id);
+                            try {
+                              await onDeleteMemory(mem.id);
+                            } finally {
+                              setDeletingId(null);
+                            }
+                          }
+                        }}
+                        disabled={deletingId === mem.id}
+                        className="p-1 rounded text-ink-muted hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50"
+                        title="Forget this memory"
+                      >
+                        {deletingId === mem.id ? (
+                          <Loader2 size={11} className="animate-spin text-rose-500" />
+                        ) : (
+                          <Trash2 size={11} />
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );

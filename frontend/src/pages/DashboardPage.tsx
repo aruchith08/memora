@@ -114,6 +114,19 @@ export default function DashboardPage() {
     loadMemories(newLimit);
   };
 
+  // Handle memory deletion
+  const handleDeleteMemory = async (id: string) => {
+    try {
+      await api.deleteMemory(id);
+      // Remove locally from UI state immediately
+      setMemories((prev) => prev.filter((m) => m.id !== id));
+      setMemoryCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      const msg = err instanceof ApiError ? (err.detail || err.message) : 'Failed to forget memory';
+      alert(`Could not delete memory: ${msg}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-canvas text-ink-primary flex flex-col">
       {/* Navigation Bar */}
@@ -158,6 +171,7 @@ export default function DashboardPage() {
           limit={memoryLimit}
           onLimitChange={handleLimitChange}
           onRefresh={() => loadMemories(memoryLimit)}
+          onDeleteMemory={handleDeleteMemory}
         />
       </main>
 

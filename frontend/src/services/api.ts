@@ -110,4 +110,10 @@ export const api = {
       throw err;
     });
   },
+
+  deleteMemory(id: string): Promise<{ status: string; message: string; id: string; uid: string }> {
+    return request<{ status: string; message: string; id: string; uid: string }>(`/memories/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
 };

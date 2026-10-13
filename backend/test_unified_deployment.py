@@ -381,6 +381,65 @@ class TestUnifiedDeployment(unittest.TestCase):
                 self.fail(f"init_qdrant_collection raised unexpectedly on existing index: {e}")
 
 
+    # 14. Delete Memory Success (Owner)
+    def test_14_delete_memory_success(self):
+        """Verifies that an authorized user can delete their own memory record."""
+        mock_client = MagicMock()
+        mock_point = MagicMock()
+        mock_point.id = "mem-123"
+        mock_point.payload = {"uid": "test_demo_user", "text": "Test memory to delete"}
+        mock_client.retrieve.return_value = [mock_point]
+
+        with patch("app.get_qdrant_client", return_value=mock_client):
+            resp = self.client.delete("/memories/mem-123")
+            self.assertEqual(resp.status_code, 200)
+            data = resp.json()
+            self.assertEqual(data.get("status"), "success")
+            self.assertEqual(data.get("id"), "mem-123")
+            mock_client.delete.assert_called_once_with(
+                collection_name=memora_app.COLLECTION_NAME,
+                points_selector=["mem-123"],
+            )
+
+    # 15. Delete Memory Not Found
+    def test_15_delete_memory_not_found(self):
+        """Verifies that attempting to delete a non-existent point returns 404."""
+        mock_client = MagicMock()
+        mock_client.retrieve.return_value = []
+
+        with patch("app.get_qdrant_client", return_value=mock_client):
+            resp = self.client.delete("/memories/non-existent-id")
+            self.assertEqual(resp.status_code, 404)
+            self.assertIn("not found", resp.json().get("detail", ""))
+
+    # 16. Delete Memory Cross-User Forbidden
+    def test_16_delete_memory_cross_user_forbidden(self):
+        """Verifies that attempting to delete another user's memory returns 403 Forbidden."""
+        mock_client = MagicMock()
+        mock_point = MagicMock()
+        mock_point.id = "mem-other-456"
+        mock_point.payload = {"uid": "victim_user", "text": "Victim's private memory"}
+        mock_client.retrieve.return_value = [mock_point]
+
+        with patch("app.get_qdrant_client", return_value=mock_client):
+            resp = self.client.delete("/memories/mem-other-456")
+            self.assertEqual(resp.status_code, 403)
+            self.assertIn("Forbidden", resp.json().get("detail", ""))
+            mock_client.delete.assert_not_called()
+
+    # 17. Delete Memory Production Admin Key Enforcement
+    def test_17_delete_memory_production_admin_required(self):
+        """Verifies that in production, DELETE /memories/{id} requires valid MEMORA_ADMIN_KEY."""
+        with patch.dict(os.environ, {"ENVIRONMENT": "production", "MEMORA_ADMIN_KEY": "secret-admin-pass"}):
+            # Attempt without key
+            resp_no_key = self.client.delete("/memories/mem-123")
+            self.assertEqual(resp_no_key.status_code, 401)
+
+            # Attempt with wrong key
+            resp_wrong_key = self.client.delete("/memories/mem-123", headers={"X-Admin-Key": "wrong"})
+            self.assertEqual(resp_wrong_key.status_code, 401)
+
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -340,7 +340,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -398,6 +398,13 @@ class MemoryListResponse(BaseModel):
     count: int
     uid: Optional[str] = None
     memories: List[MemoryItem]
+
+
+class MemoryDeleteResponse(BaseModel):
+    status: str
+    message: str
+    id: str
+    uid: str
 
 
 # Routes
@@ -1345,6 +1352,81 @@ def list_recent_memories(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to list memories: {str(e)}",
+        )
+
+
+@app.delete("/memories/{memory_id}", response_model=MemoryDeleteResponse, tags=["Memories"])
+def delete_memory(memory_id: str, req: Request):
+    """
+    Deletes a specific memory from Qdrant by its point ID.
+    Enforces strict user identity ownership (caller can only delete their own records).
+    In production, mutations require valid MEMORA_ADMIN_KEY authorization.
+    """
+    verify_admin_access(
+        auth_header=req.headers.get("authorization"),
+        admin_key=req.headers.get("x-admin-key"),
+    )
+
+    clean_id = (memory_id or "").strip()
+    if not clean_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Valid memory ID is required for deletion.",
+        )
+
+    effective_uid = get_effective_demo_uid()
+    client = get_qdrant_client()
+
+    try:
+        # Retrieve point to verify existence and confirm UID ownership
+        records = client.retrieve(
+            collection_name=COLLECTION_NAME,
+            ids=[clean_id],
+            with_payload=True,
+            with_vectors=False,
+        )
+
+        if not records:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Memory '{clean_id}' not found.",
+            )
+
+        point = records[0]
+        point_payload = point.payload or {}
+        record_uid = str(point_payload.get("uid", "")).strip()
+
+        # Strict cross-user isolation: verify record belongs to effective UID
+        if record_uid != effective_uid:
+            logger.warning(
+                f"[Security] Denied cross-user deletion attempt for point '{clean_id}' "
+                f"(record_uid='{record_uid}', effective_uid='{effective_uid}')"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Cannot delete memories belonging to another user.",
+            )
+
+        # Permanently delete from Qdrant vector collection
+        client.delete(
+            collection_name=COLLECTION_NAME,
+            points_selector=[clean_id],
+        )
+        logger.info(f"Permanently deleted memory '{clean_id}' for uid='{effective_uid}'.")
+
+        return MemoryDeleteResponse(
+            status="success",
+            message=f"Memory '{clean_id}' permanently forgotten.",
+            id=clean_id,
+            uid=effective_uid,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting memory '{clean_id}': {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete memory: {str(e)}",
         )
 
 
