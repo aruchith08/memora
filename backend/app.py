@@ -20,6 +20,7 @@ from qdrant_client.models import (
     Filter,
     FieldCondition,
     MatchValue,
+    PayloadSchemaType,
 )
 from fastembed import TextEmbedding
 
@@ -158,6 +159,24 @@ def init_qdrant_collection() -> None:
             logger.info(f"Collection '{COLLECTION_NAME}' created successfully.")
         else:
             logger.info(f"Collection '{COLLECTION_NAME}' already exists.")
+
+        # Ensure keyword payload index on 'uid' exists for filtered searches and scrolling
+        try:
+            client.create_payload_index(
+                collection_name=COLLECTION_NAME,
+                field_name="uid",
+                field_schema=PayloadSchemaType.KEYWORD,
+            )
+            logger.info(f"Payload index for 'uid' (KEYWORD) verified/created in '{COLLECTION_NAME}'.")
+        except Exception as idx_err:
+            # Idempotent guard: if index already exists or server returns ok/conflict, proceed safely
+            err_msg = str(idx_err).lower()
+            if "already exists" in err_msg or "conflict" in err_msg:
+                logger.info(f"Payload index for 'uid' already exists in '{COLLECTION_NAME}'.")
+            else:
+                logger.warning(
+                    f"Notice during payload index creation for 'uid' in '{COLLECTION_NAME}': {idx_err}"
+                )
     except Exception as e:
         logger.error(f"Failed to initialize Qdrant collection '{COLLECTION_NAME}': {e}")
         raise

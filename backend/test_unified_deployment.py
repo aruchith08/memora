@@ -348,6 +348,39 @@ class TestUnifiedDeployment(unittest.TestCase):
             self.assertEqual(memora_app.get_reasoning_result_file_path(), "/tmp/latest_reasoning_result.json")
 
 
+    # 12. Payload Index Initialization Creates Index
+    def test_12_payload_index_initialization_creates_index(self):
+        """Verifies that init_qdrant_collection calls create_payload_index for 'uid'."""
+        mock_client = MagicMock()
+        mock_collection = MagicMock()
+        mock_collection.name = memora_app.COLLECTION_NAME
+        mock_client.get_collections.return_value.collections = [mock_collection]
+
+        with patch("app.get_qdrant_client", return_value=mock_client):
+            memora_app.init_qdrant_collection()
+            mock_client.create_payload_index.assert_called_once_with(
+                collection_name=memora_app.COLLECTION_NAME,
+                field_name="uid",
+                field_schema=memora_app.PayloadSchemaType.KEYWORD,
+            )
+
+    # 13. Payload Index Idempotent On Existing
+    def test_13_payload_index_idempotent_on_existing(self):
+        """Verifies that init_qdrant_collection handles already existing index gracefully."""
+        mock_client = MagicMock()
+        mock_collection = MagicMock()
+        mock_collection.name = memora_app.COLLECTION_NAME
+        mock_client.get_collections.return_value.collections = [mock_collection]
+        mock_client.create_payload_index.side_effect = Exception("Index already exists for uid")
+
+        with patch("app.get_qdrant_client", return_value=mock_client):
+            # Should not raise exception
+            try:
+                memora_app.init_qdrant_collection()
+            except Exception as e:
+                self.fail(f"init_qdrant_collection raised unexpectedly on existing index: {e}")
+
+
 if __name__ == "__main__":
     unittest.main()
 
