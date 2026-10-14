@@ -24,7 +24,7 @@ const pillars = [
 export default function PrivacyTrust() {
   return (
     <section id="privacy" className="py-20 lg:py-28 border-t border-surface-border">
-      <div className="max-w-6xl mx-auto px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-xl mb-14">
           <p className="text-xs font-semibold text-ink-secondary uppercase tracking-widest mb-4">
             Privacy

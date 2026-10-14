@@ -16,10 +16,10 @@ const footerLinks = {
 export default function Footer() {
   return (
     <footer className="border-t border-surface-border bg-canvas">
-      <div className="max-w-6xl mx-auto px-6 lg:px-8 py-14 lg:py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10">
           {/* Brand column */}
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <Link to="/" className="text-ink-primary font-semibold text-base tracking-tight">
               Memora
             </Link>
@@ -61,7 +61,7 @@ export default function Footer() {
           ))}
         </div>
 
-        <div className="mt-12 pt-8 border-t border-surface-border flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-10 sm:mt-12 pt-6 sm:pt-8 border-t border-surface-border flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
           <p className="text-xs text-ink-faint">
             &copy; {new Date().getFullYear()} Memora. All rights reserved.
           </p>

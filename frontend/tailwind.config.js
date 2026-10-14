@@ -62,7 +62,10 @@ export default {
         tightest: '-0.035em',
         tighter: '-0.025em',
         tight: '-0.015em',
-      }
+      },
+      screens: {
+        xs: '480px',
+      },
     },
   },
   plugins: [],

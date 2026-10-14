@@ -143,7 +143,7 @@ function ProductPreviewCard() {
 
 export default function Hero() {
   return (
-    <section className="relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden">
+    <section className="relative pt-28 pb-16 lg:pt-40 lg:pb-28 overflow-hidden">
       {/* Subtle radial backdrop */}
       <div
         aria-hidden
@@ -154,34 +154,34 @@ export default function Hero() {
         }}
       />
 
-      <div className="max-w-6xl mx-auto px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Left: copy */}
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-surface-border bg-white text-xs text-ink-secondary mb-8 shadow-sm">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-surface-border bg-white text-xs text-ink-secondary mb-6 sm:mb-8 shadow-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-accent-blue inline-block" />
               Powered by Lyzr multi-agent orchestration
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-ink-primary leading-[1.08] tracking-tightest text-balance">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-ink-primary leading-[1.08] tracking-tightest text-balance">
               Your memory.{' '}
               <span className="text-ink-secondary">Working for you.</span>
             </h1>
 
-            <p className="mt-6 text-lg text-ink-secondary leading-relaxed max-w-md text-balance">
+            <p className="mt-5 sm:mt-6 text-base sm:text-lg text-ink-secondary leading-relaxed max-w-md text-balance">
               Speak naturally. Memora captures, understands, and acts — surfacing the right context exactly when you need it.
             </p>
 
-            <div className="mt-9 flex flex-wrap gap-3">
+            <div className="mt-7 sm:mt-9 flex flex-col xs:flex-row flex-wrap gap-3">
               <Link
                 to="/app"
-                className="inline-flex items-center px-6 py-3 rounded-lg bg-ink-primary text-canvas text-sm font-semibold hover:bg-ink-secondary transition-colors duration-200 shadow-sm"
+                className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-ink-primary text-canvas text-sm font-semibold hover:bg-ink-secondary transition-colors duration-200 shadow-sm"
               >
                 Open MEMORA
               </Link>
               <Link
                 to="/get-started"
-                className="inline-flex items-center px-6 py-3 rounded-lg border border-surface-border bg-white text-sm font-medium text-ink-secondary hover:text-ink-primary hover:border-surface-hover transition-colors duration-200"
+                className="inline-flex items-center justify-center px-6 py-3 rounded-lg border border-surface-border bg-white text-sm font-medium text-ink-secondary hover:text-ink-primary hover:border-surface-hover transition-colors duration-200"
               >
                 Get started
               </Link>

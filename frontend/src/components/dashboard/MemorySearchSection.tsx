@@ -70,9 +70,9 @@ export const MemorySearchSection: React.FC<MemorySearchSectionProps> = ({
   };
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-b from-blue-50/80 via-blue-50/30 to-white p-6 sm:p-8 text-center shadow-2xs">
+    <div className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-b from-blue-50/80 via-blue-50/30 to-white p-4 sm:p-6 md:p-8 text-center shadow-2xs">
       {/* Title & Subtitle */}
-      <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+      <h1 className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
         Search Your <span className="text-blue-600">Memories</span>
       </h1>
       <p className="mt-1.5 text-xs sm:text-sm text-slate-500">
@@ -82,22 +82,22 @@ export const MemorySearchSection: React.FC<MemorySearchSectionProps> = ({
       {/* Main Search Input Form */}
       <form
         onSubmit={handleFormSubmit}
-        className="mt-6 max-w-3xl mx-auto flex items-center gap-2 bg-white border border-slate-200/90 rounded-2xl p-2 sm:p-2.5 shadow-sm focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all"
+        className="mt-5 sm:mt-6 max-w-3xl mx-auto flex items-center gap-1.5 sm:gap-2 bg-white border border-slate-200/90 rounded-2xl p-1.5 sm:p-2.5 shadow-sm focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all"
       >
-        <Search size={18} className="text-blue-600 ml-2.5 shrink-0" />
+        <Search size={16} className="text-blue-600 ml-2 shrink-0" />
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder='Search memories (e.g. "flights to SF", "MSF class", "grocery list")'
-          className="flex-1 bg-transparent px-2.5 py-1 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none"
+          placeholder='Search memories...'
+          className="flex-1 min-w-0 bg-transparent px-1.5 sm:px-2.5 py-1 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none"
         />
 
         {query && (
           <button
             type="button"
             onClick={handleClear}
-            className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors shrink-0"
             title="Clear search query"
           >
             <X size={14} />
@@ -106,7 +106,7 @@ export const MemorySearchSection: React.FC<MemorySearchSectionProps> = ({
 
         <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block" />
 
-        {/* Limit Dropdown */}
+        {/* Limit Dropdown — hidden on very small screens, visible sm+ */}
         <select
           value={limit}
           onChange={(e) => {
@@ -116,7 +116,7 @@ export const MemorySearchSection: React.FC<MemorySearchSectionProps> = ({
               performSearch(lastExecutedQuery, newLimit);
             }
           }}
-          className="bg-transparent border-0 text-xs font-semibold text-slate-600 focus:outline-none px-2 py-1 cursor-pointer hover:text-slate-900"
+          className="hidden sm:block bg-transparent border-0 text-xs font-semibold text-slate-600 focus:outline-none px-2 py-1 cursor-pointer hover:text-slate-900 shrink-0"
           title="Number of results"
         >
           <option value={3}>Top 3</option>
@@ -128,27 +128,27 @@ export const MemorySearchSection: React.FC<MemorySearchSectionProps> = ({
         <button
           type="submit"
           disabled={isSearching || !query.trim()}
-          className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-colors disabled:opacity-50 shadow-xs cursor-pointer shrink-0"
+          className="inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-colors disabled:opacity-50 shadow-xs cursor-pointer shrink-0"
         >
           {isSearching ? (
-            <Loader2 size={16} className="animate-spin" />
+            <Loader2 size={15} className="animate-spin" />
           ) : (
-            <Search size={16} />
+            <Search size={15} />
           )}
-          <span>Search</span>
+          <span className="hidden xs:inline sm:inline">Search</span>
         </button>
       </form>
 
       {/* Query Suggestion Chips */}
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto">
+      <div className="mt-3 sm:mt-4 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 max-w-3xl mx-auto">
         {DEFAULT_SUGGESTIONS.map((suggestion) => (
           <button
             key={suggestion}
             type="button"
             onClick={() => handleChipClick(suggestion)}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs text-slate-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/50 transition-all shadow-2xs cursor-pointer"
+            className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs text-slate-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/50 transition-all shadow-2xs cursor-pointer"
           >
-            <Search size={11} className="text-slate-400" />
+            <Search size={10} className="text-slate-400 shrink-0" />
             <span>{suggestion}</span>
           </button>
         ))}

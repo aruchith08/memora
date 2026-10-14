@@ -32,11 +32,11 @@ export const DashboardNav: React.FC<DashboardNavProps> = ({
         </div>
 
         {/* Right: Status badge, refresh button & marketing site link */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Connection status badge */}
           <div
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors',
+              'inline-flex items-center gap-1.5 px-2 sm:px-3 py-1 rounded-full text-xs font-medium border transition-colors',
               connectionStatus === 'connected' &&
                 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
               connectionStatus === 'connecting' &&
@@ -54,42 +54,42 @@ export const DashboardNav: React.FC<DashboardNavProps> = ({
           >
             {connectionStatus === 'connected' && (
               <>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Backend Connected</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="hidden xs:inline sm:inline">Connected</span>
               </>
             )}
             {connectionStatus === 'connecting' && (
               <>
-                <Loader2 size={12} className="animate-spin text-amber-600" />
-                <span>Connecting...</span>
+                <Loader2 size={12} className="animate-spin text-amber-600 shrink-0" />
+                <span className="hidden sm:inline">Connecting...</span>
               </>
             )}
             {connectionStatus === 'disconnected' && (
               <>
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                <span>Backend Offline</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                <span className="hidden sm:inline">Offline</span>
               </>
             )}
           </div>
 
-          {/* Refresh button */}
+          {/* Refresh button — icon-only on mobile */}
           <button
             onClick={onRefreshAll}
             disabled={isRefreshing}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50 transition-all shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50 transition-all shadow-2xs"
             title="Refresh dashboard data"
           >
             <RefreshCw
               size={13}
               className={cn('text-slate-500', isRefreshing && 'animate-spin text-blue-600')}
             />
-            <span>Refresh</span>
+            <span className="hidden sm:inline">Refresh</span>
           </button>
 
           {/* Marketing site link */}
           <Link
             to="/"
-            className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 px-2.5 py-1.5 rounded-xl border border-transparent hover:border-slate-200 transition-all"
+            className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 px-2 sm:px-2.5 py-1.5 rounded-xl border border-transparent hover:border-slate-200 transition-all"
           >
             <ArrowLeft size={13} />
             <span className="hidden sm:inline">Overview</span>
