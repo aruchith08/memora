@@ -8,49 +8,49 @@ function ProductPreviewCard() {
   return (
     <div className="relative w-full max-w-[460px] mx-auto rounded-2xl border border-surface-border/80 bg-white shadow-preview overflow-hidden transition-all duration-300 ease-out hover:shadow-floating cursor-default">
       {/* Window chrome header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border/60 bg-white">
+      <div className="flex items-center justify-between px-3.5 sm:px-4 py-2.5 sm:py-3 border-b border-surface-border/60 bg-white">
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444]" />
           <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
           <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
-          <span className="ml-2.5 text-[11px] text-ink-muted/80 font-mono tracking-tight">
+          <span className="ml-2 text-[10px] sm:text-[11px] text-ink-muted/80 font-mono tracking-tight">
             memora · live pipeline
           </span>
         </div>
-        <div className="flex items-center gap-1 text-[11px] font-semibold text-ink-primary">
+        <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-ink-primary">
           <span className="relative flex h-1.5 w-1.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
           </span>
-          <span className="text-[11px] font-medium text-ink-primary">Live</span>
+          <span className="text-[10px] sm:text-[11px] font-medium text-ink-primary">Live</span>
         </div>
       </div>
 
       {/* Pipeline steps container */}
-      <div className="p-3.5 space-y-2.5 bg-[#FAF9F6]/60">
+      <div className="p-2.5 sm:p-3.5 space-y-2 sm:space-y-2.5 bg-[#FAF9F6]/60">
         {/* Step 1: Voice captured */}
-        <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F6F5F2] border border-surface-border/50 transition-all hover:border-surface-border">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-white border border-surface-border/70 flex items-center justify-center shrink-0 shadow-xs">
-              <Mic size={15} strokeWidth={2} className="text-[#2563EB]" />
+        <div className="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-[#F6F5F2] border border-surface-border/50 transition-all hover:border-surface-border gap-2">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white border border-surface-border/70 flex items-center justify-center shrink-0 shadow-xs">
+              <Mic size={14} strokeWidth={2} className="text-[#2563EB]" />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-ink-primary">Voice captured</span>
-                <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-[#E0E7FF] text-[#3B82F6]">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                <span className="text-[11px] sm:text-xs font-bold text-ink-primary">Voice captured</span>
+                <span className="text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-[#E0E7FF] text-[#3B82F6]">
                   done
                 </span>
               </div>
-              <p className="text-[11px] text-ink-muted leading-tight truncate">
+              <p className="text-[10px] sm:text-[11px] text-ink-muted leading-tight truncate">
                 "Remind me about the investor meeting on Friday."
               </p>
             </div>
           </div>
 
           {/* Animated audio wave */}
-          <div className="flex items-center gap-2 shrink-0 pl-2">
-            <div className="flex items-center gap-0.5 h-5">
-              {waveHeights.map((h, idx) => (
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 pl-1">
+            <div className="flex items-center gap-0.5 h-4 sm:h-5">
+              {waveHeights.slice(0, 10).map((h, idx) => (
                 <span
                   key={idx}
                   className="w-[2px] rounded-full bg-[#3B82F6] animate-wave-bar"
@@ -62,78 +62,78 @@ function ProductPreviewCard() {
                 />
               ))}
             </div>
-            <span className="text-[10px] font-mono text-ink-muted tracking-tight">0:04</span>
+            <span className="text-[9px] sm:text-[10px] font-mono text-ink-muted tracking-tight">0:04</span>
           </div>
         </div>
 
         {/* Step 2: Memory stored */}
-        <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F6F5F2] border border-surface-border/50 transition-all hover:border-surface-border">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-white border border-surface-border/70 flex items-center justify-center shrink-0 shadow-xs">
-              <Brain size={15} strokeWidth={2} className="text-[#EA580C]" />
+        <div className="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-[#F6F5F2] border border-surface-border/50 transition-all hover:border-surface-border gap-2">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white border border-surface-border/70 flex items-center justify-center shrink-0 shadow-xs">
+              <Brain size={14} strokeWidth={2} className="text-[#EA580C]" />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-ink-primary">Memory stored</span>
-                <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-[#E0E7FF] text-[#3B82F6]">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                <span className="text-[11px] sm:text-xs font-bold text-ink-primary">Memory stored</span>
+                <span className="text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-[#E0E7FF] text-[#3B82F6]">
                   done
                 </span>
               </div>
-              <p className="text-[11px] text-ink-muted leading-tight truncate font-mono">
-                Qdrant Cloud · bge-small-en-v1.5 · tenant:secure
+              <p className="text-[10px] sm:text-[11px] text-ink-muted leading-tight truncate font-mono">
+                Qdrant Cloud · bge-small-en-v1.5
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/90 border border-surface-border/70 text-[10px] font-medium text-ink-secondary shrink-0 shadow-xs">
-            <Check size={12} strokeWidth={2.5} className="text-emerald-500" />
-            <span>Stored in 426 ms</span>
+          <div className="flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-white/90 border border-surface-border/70 text-[9px] sm:text-[10px] font-medium text-ink-secondary shrink-0 shadow-xs">
+            <Check size={11} strokeWidth={2.5} className="text-emerald-500" />
+            <span>426 ms</span>
           </div>
         </div>
 
         {/* Step 3: Action surfaced */}
-        <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE] transition-all shadow-xs">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-white border border-[#BFDBFE] flex items-center justify-center shrink-0 shadow-xs">
-              <Zap size={15} strokeWidth={2} className="text-[#2563EB]" />
+        <div className="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE] transition-all shadow-xs gap-2">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white border border-[#BFDBFE] flex items-center justify-center shrink-0 shadow-xs">
+              <Zap size={14} strokeWidth={2} className="text-[#2563EB]" />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-ink-primary">Action surfaced</span>
-                <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-[#FFEDD5] text-[#EA580C]">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                <span className="text-[11px] sm:text-xs font-bold text-ink-primary">Action surfaced</span>
+                <span className="text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-[#FFEDD5] text-[#EA580C]">
                   processing
                 </span>
               </div>
-              <p className="text-[11px] text-ink-muted leading-tight truncate">
-                Calendar block created · Reminder set · 2 days out
+              <p className="text-[10px] sm:text-[11px] text-ink-muted leading-tight truncate">
+                Calendar block created · Reminder set
               </p>
             </div>
           </div>
 
           {/* Animated Spinner ring */}
-          <div className="relative w-5 h-5 shrink-0 flex items-center justify-center">
-            <div className="w-4 h-4 rounded-full border-2 border-blue-200 border-t-[#2563EB] animate-spin" />
+          <div className="relative w-4 h-4 sm:w-5 sm:h-5 shrink-0 flex items-center justify-center">
+            <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 border-blue-200 border-t-[#2563EB] animate-spin" />
           </div>
         </div>
 
         {/* Multi-Agent status tabs row */}
-        <div className="pt-1 grid grid-cols-3 gap-1.5">
+        <div className="pt-1 grid grid-cols-3 gap-1 sm:gap-1.5">
           {/* Manager active card */}
-          <div className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-white border border-surface-border shadow-xs">
-            <Layers size={13} strokeWidth={1.8} className="text-ink-primary" />
-            <span className="text-[11px] font-semibold text-ink-primary">Manager</span>
+          <div className="flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 px-1 sm:px-2 rounded-lg bg-white border border-surface-border shadow-xs text-center">
+            <Layers size={12} strokeWidth={1.8} className="text-ink-primary shrink-0" />
+            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-primary truncate">Manager</span>
           </div>
 
           {/* Reasoner */}
-          <div className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-transparent border border-transparent hover:bg-white/60 transition-colors">
-            <Brain size={13} strokeWidth={1.8} className="text-ink-primary" />
-            <span className="text-[11px] font-medium text-ink-primary">Reasoner</span>
+          <div className="flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 px-1 sm:px-2 rounded-lg bg-transparent border border-transparent hover:bg-white/60 transition-colors text-center">
+            <Brain size={12} strokeWidth={1.8} className="text-ink-primary shrink-0" />
+            <span className="text-[10px] sm:text-[11px] font-medium text-ink-primary truncate">Reasoner</span>
           </div>
 
           {/* Action Planner */}
-          <div className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-transparent border border-transparent hover:bg-white/60 transition-colors">
-            <Zap size={13} strokeWidth={1.8} className="text-ink-primary" />
-            <span className="text-[11px] font-medium text-ink-primary">Action Planner</span>
+          <div className="flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 px-1 sm:px-2 rounded-lg bg-transparent border border-transparent hover:bg-white/60 transition-colors text-center">
+            <Zap size={12} strokeWidth={1.8} className="text-ink-primary shrink-0" />
+            <span className="text-[10px] sm:text-[11px] font-medium text-ink-primary truncate">Planner</span>
           </div>
         </div>
       </div>
