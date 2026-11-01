@@ -41,3 +41,7 @@ services:
         sync: false
       - key: MEMORA_ADMIN_KEY
         sync: false
+      - key: MEMORA_DASHBOARD_PASSWORD
+        sync: false
+      - key: MEMORA_SESSION_SECRET
+        sync: false
