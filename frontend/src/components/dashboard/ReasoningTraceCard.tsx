@@ -173,7 +173,10 @@ export const ReasoningTraceCard: React.FC<ReasoningTraceCardProps> = ({
 
         // Dynamic Action Planner Status
         const planner = Array.isArray(reasoning.workers_invoked)
-          ? reasoning.workers_invoked.find(w => typeof w !== 'string' && w.agent_name?.toLowerCase().includes('planner'))
+          ? reasoning.workers_invoked.find(
+              (worker): worker is { agent_name?: string; status?: string } =>
+                typeof worker !== 'string' && !!worker.agent_name?.toLowerCase().includes('planner')
+            )
           : undefined;
         const hasPlanner = !!planner || !!reasoning.orchestration_mode?.includes('sequential');
         const plannerLabel = hasPlanner
