@@ -203,6 +203,9 @@ def store_memory(
     """
     if not text or not text.strip():
         raise ValueError("Cannot store empty text memory.")
+    reserved = {"uid", "text", "source", "created_at", "ts"}
+    if metadata and reserved.intersection(metadata):
+        raise ValueError("Metadata cannot replace reserved memory fields.")
 
     client = get_qdrant_client()
     clean_text = text.strip()
@@ -980,10 +983,7 @@ def on_conversation(
 
     logger.info(f"[Omi Webhook] Conversation completed received for uid='{effective_uid}'")
     try:
-        raw_json_str = json.dumps(payload, default=str)
-        logger.info(f"[Omi Webhook RAW PAYLOAD] {raw_json_str}")
-        with open("latest_omi_payload.json", "w", encoding="utf-8") as f:
-            f.write(raw_json_str)
+        logger.info("[Omi Webhook] Payload received (content omitted for privacy).")
     except Exception as e:
         logger.warning(f"Could not log/save raw Omi payload: {e}")
 
@@ -998,7 +998,8 @@ def on_conversation(
     if conversation_id:
         dedup_key = f"{effective_uid}:{conversation_id}"
         with _events_lock:
-            if dedup_key in _processed_omi_events:
+            existing_event = _processed_omi_events.get(dedup_key)
+            if existing_event and existing_event.get("event_status") != "failed":
                 logger.info(
                     f"[Omi Webhook Idempotency] Duplicate conversation event skipped: "
                     f"uid='{effective_uid}', conversation_id='{conversation_id}' (event_status='duplicate_skipped')"
@@ -1008,9 +1009,9 @@ def on_conversation(
                 "uid": effective_uid,
                 "conversation_id": conversation_id,
                 "processed_at": datetime.now(timezone.utc).isoformat(),
-                "event_status": "processed",
+                "event_status": "pending",
             }
-            if len(_processed_omi_events) > _MAX_PROCESSED_EVENTS:
+            if len(_processed_omi_events > _MAX_PROCESSED_EVENTS:
                 oldest_key = next(iter(_processed_omi_events))
                 del _processed_omi_events[oldest_key]
 
@@ -1118,6 +1119,9 @@ def on_conversation(
             logger.info(f"[Omi Webhook] Successfully stored conversation memory for uid='{effective_uid}' ({len(text)} chars)")
         except Exception as store_err:
             logger.error(f"[Omi Webhook] Direct store_memory failed, queueing background task: {store_err}")
+            if conversation_id:
+                with _events_lock:
+                    _processed_omi_events[dedup_key]["event_status"] = "failed"
             background_tasks.add_task(
                 store_memory,
                 text=text,
@@ -1134,7 +1138,7 @@ def on_conversation(
 @app.get("/omi/events/{conversation_id}", tags=["Omi"])
 def get_event_status_endpoint(conversation_id: str, uid: Optional[str] = None):
     """Inspects the idempotency processing status of a specific Omi conversation event."""
-    effective_uid = uid or "omi_user"
+    effective_uid = uid or get_effective_demo_uid()
     record = get_event_record(effective_uid, conversation_id)
     if record:
         return {"status": "ok", "event_status": record.get("event_status", "processed"), "record": record}
@@ -1236,7 +1240,10 @@ def on_realtime(
     session_key = f"{effective_uid}:{effective_session_id}" if effective_session_id else effective_uid
 
     # Handle explicit flush with no incoming text
-    if flush and not text:
+    if flush:
+        if text:
+            with _realtime_lock:
+                _realtime_buffers.setdefault(session_key, []).append(text)
         flush_realtime_session(session_key, effective_uid, effective_session_id)
         return {"status": "ok"}
 
@@ -1457,12 +1464,12 @@ def list_recent_memories(
         all_points = []
         offset = None
         # Bounded scroll batches to gather points for chronological sorting
-        max_fetch = max(limit * 3, 60)
-        while len(all_points) < max_fetch:
+        max_fetch = None  # Load the full scoped partition before sorting by timestamp.
+        while max_fetch is None or len(all_points) < max_fetch:
             batch, offset = client.scroll(
                 collection_name=COLLECTION_NAME,
                 scroll_filter=scroll_filter,
-                limit=min(50, max_fetch - len(all_points)),
+                limit=50 if max_fetch is None else min(50, max_fetch - len(all_points)),
                 offset=offset,
                 with_payload=True,
                 with_vectors=False,
