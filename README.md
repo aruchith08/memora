@@ -174,7 +174,7 @@ All routes are implemented and validated:
 | `GET` | `/memories` | Recent memories in chronological descending order | Scoped by `DEMO_UID` |
 | `POST` | `/memories` | Vectorize and insert a new text memory | `MEMORA_ADMIN_KEY` in production |
 | `POST` | `/memories/search` | Semantic vector search with cosine similarity ranking | Scoped by `DEMO_UID` |
-| `DELETE` | `/memories/{memory_id}` | Permanently delete/forget a specific memory | Owner verification + `MEMORA_ADMIN_KEY` |
+| `DELETE` | `/memories/{memory_id}` | Permanently delete/forget a specific memory | Dashboard session + owner verification |
 | `POST` | `/reason` | Direct multi-agent reasoning execution | `MEMORA_ADMIN_KEY` in production |
 | `GET` | `/reason/latest` | Audit trace of the latest multi-agent reasoning run | Public (sanitized, zero secrets) |
 | `POST` | `/omi/conversation` | Ingest completed conversation transcript from Omi | `OMI_WEBHOOK_SECRET` |
@@ -197,7 +197,7 @@ All routes are implemented and validated:
 
 ### Environment Variables Reference
 
-MEMORA separates configuration from code. Ensure the following environment variables are configured in your `.env` (for local development) or within the **Vercel Project Dashboard** (for cloud production deployment).
+MEMORA separates configuration from code. Configure backend variables in the backend host's environment settings (Vercel or Render) or in `backend/.env` for local development. Never add dashboard credentials to frontend `VITE_` variables. Set a strong `MEMORA_DASHBOARD_PASSWORD` and a separate random `MEMORA_SESSION_SECRET` (at least 32 random bytes); both are required for dashboard deletion.
 
 | Environment Variable | Required | Description | Example / Default Value |
 | :--- | :--- | :--- | :--- |
@@ -215,7 +215,9 @@ MEMORA separates configuration from code. Ensure the following environment varia
 | `CORS_ORIGINS` | No | Comma-separated list of allowed web frontend origins | `https://memora-arh.vercel.app,http://localhost:5173` |
 | `ENVIRONMENT` | No | Set to `production` or `development` | `production` |
 | `OMI_WEBHOOK_SECRET` | No | Optional webhook secret checked on incoming Omi calls | *(Leave blank for frictionless testing)* |
-| `MEMORA_ADMIN_KEY` | No | Admin key guarding mutation endpoints in production | *(Optional administrative secret)* |
+| `MEMORA_ADMIN_KEY` | No | Admin key guarding manual memory creation and reasoning endpoints in production | *(Server-side secret)* |
+| `MEMORA_DASHBOARD_PASSWORD` | **Yes for dashboard deletion** | Shared password exchanged for a short-lived delete session | *(Set only in backend environment)* |
+| `MEMORA_SESSION_SECRET` | **Yes for dashboard deletion** | Random server-side key used to sign one-hour dashboard sessions; use 32+ random bytes | *(Set only in backend environment)* |
 | `VITE_API_URL` *(Frontend)* | **Yes** | Backend URL configured in frontend Vercel deployment | `https://memora-1iae.vercel.app` |
 
 ---

@@ -164,19 +164,23 @@ export const ReasoningTraceCard: React.FC<ReasoningTraceCardProps> = ({
           ? reasoning.retrieved_memory_count
           : (Array.isArray(reasoning.retrieved_memory_ids) ? reasoning.retrieved_memory_ids.length : 0);
 
-        const isCompleted = reasoning.status === 'success' || reasoning.processing_status === 'completed' || reasoning.event_status === 'processed' || !!reasoning.manager_answer || !!reasoning.lyzr_answer;
         const isError = reasoning.status === 'error' || reasoning.processing_status === 'error' || !!reasoning.error;
+        const isCompleted = !isError && (reasoning.status === 'success' || reasoning.processing_status === 'completed' || !!reasoning.manager_answer || !!reasoning.lyzr_answer);
 
         // Dynamic Reasoner Status
         const reasonerLabel = isCompleted ? 'Reasoner: Done' : isError ? 'Reasoner: Failed' : 'Reasoner: In Progress';
         const reasonerClass = isCompleted ? 'bg-blue-50/70 border-blue-100 text-blue-900' : isError ? 'bg-rose-50/70 border-rose-100 text-rose-900' : 'bg-slate-50 border-slate-200 text-slate-700';
 
         // Dynamic Action Planner Status
-        const hasPlanner = Array.isArray(reasoning.workers_invoked)
-          ? reasoning.workers_invoked.some(w => typeof w === 'string' ? w.toLowerCase().includes('planner') : (w.agent_name?.toLowerCase().includes('planner') || false))
-          : (reasoning.orchestration_mode?.includes('sequential') || isCompleted);
+        const planner = Array.isArray(reasoning.workers_invoked)
+          ? reasoning.workers_invoked.find(
+              (worker): worker is { agent_name?: string; status?: string } =>
+                typeof worker !== 'string' && !!worker.agent_name?.toLowerCase().includes('planner')
+            )
+          : undefined;
+        const hasPlanner = !!planner || !!reasoning.orchestration_mode?.includes('sequential');
         const plannerLabel = hasPlanner
-          ? (isCompleted ? 'Planner: Done' : isError ? 'Planner: Failed' : 'Planner: Pending')
+          ? (planner?.status === 'failed' || isError ? 'Planner: Failed' : planner?.status === 'completed' || (isCompleted && !planner) ? 'Planner: Done' : 'Planner: Pending')
           : 'Planner: Not Invoked';
         const plannerClass = hasPlanner && isCompleted
           ? 'bg-orange-50/70 border-orange-100 text-orange-900'

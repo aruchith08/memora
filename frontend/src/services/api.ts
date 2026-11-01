@@ -111,9 +111,17 @@ export const api = {
     });
   },
 
-  deleteMemory(id: string): Promise<{ status: string; message: string; id: string; uid: string }> {
+  createDashboardSession(password: string): Promise<{ access_token: string; token_type: string; expires_in: number }> {
+    return request<{ access_token: string; token_type: string; expires_in: number }>('/dashboard/session', {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    });
+  },
+
+  deleteMemory(id: string, accessToken: string): Promise<{ status: string; message: string; id: string; uid: string }> {
     return request<{ status: string; message: string; id: string; uid: string }>(`/memories/${encodeURIComponent(id)}`, {
       method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
   },
 };
