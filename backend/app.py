@@ -1588,12 +1588,12 @@ def list_recent_memories(
 @app.post("/dashboard/session", response_model=DashboardSessionResponse, tags=["Dashboard"])
 def create_dashboard_session(request: DashboardSessionRequest):
     """Issues a short-lived token for dashboard memory deletion without exposing server secrets."""
-    expected_password, _ = _dashboard_auth_config()
+    expected_password, signing_secret = _dashboard_auth_config()
     if not hmac.compare_digest(request.password, expected_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect dashboard password.")
 
     expires_at = str(int(time.time()) + DASHBOARD_SESSION_TTL_SECONDS)
-    signature = _dashboard_token_signature(expires_at, _dashboard_auth_config()[1])
+    signature = _dashboard_token_signature(expires_at, signing_secret)
     return DashboardSessionResponse(
         access_token=f"{expires_at}.{signature}",
         expires_in=DASHBOARD_SESSION_TTL_SECONDS,
