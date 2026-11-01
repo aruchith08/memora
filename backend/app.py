@@ -1,5 +1,7 @@
 import os
 import uuid
+import hashlib
+import hmac
 import logging
 import time
 import json
@@ -409,6 +411,16 @@ class MemoryDeleteResponse(BaseModel):
     message: str
     id: str
     uid: str
+
+
+class DashboardSessionRequest(BaseModel):
+    password: str = Field(..., min_length=1)
+
+
+class DashboardSessionResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
 
 
 # Routes
@@ -950,6 +962,45 @@ def verify_admin_access(auth_header: Optional[str] = None, admin_key: Optional[s
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Unauthorized: valid MEMORA_ADMIN_KEY required for administrative operations.",
             )
+
+
+DASHBOARD_SESSION_TTL_SECONDS = 60 * 60
+_DASHBOARD_SESSION_SCOPE = "memora:delete-memory"
+
+
+def _dashboard_auth_config() -> tuple[str, str]:
+    password = os.getenv("MEMORA_DASHBOARD_PASSWORD", "").strip()
+    signing_secret = os.getenv("MEMORA_SESSION_SECRET", "").strip()
+    if not password or not signing_secret:
+        logger.error("[Security] Dashboard delete auth is unavailable: required secrets are not configured.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Dashboard delete authentication is not configured on the server.",
+        )
+    return password, signing_secret
+
+
+def _dashboard_token_signature(expires_at: str, signing_secret: str) -> str:
+    message = f"{_DASHBOARD_SESSION_SCOPE}:{expires_at}".encode("utf-8")
+    return hmac.new(signing_secret.encode("utf-8"), message, hashlib.sha256).hexdigest()
+
+
+def verify_dashboard_session(auth_header: Optional[str]) -> None:
+    _, signing_secret = _dashboard_auth_config()
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Dashboard login required.")
+
+    token_parts = auth_header[7:].strip().split(".", 1)
+    if len(token_parts) != 2:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid dashboard session.")
+
+    expires_at, provided_signature = token_parts
+    if not expires_at.isdigit() or int(expires_at) <= int(time.time()):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Dashboard session expired.")
+
+    expected_signature = _dashboard_token_signature(expires_at, signing_secret)
+    if not hmac.compare_digest(provided_signature, expected_signature):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid dashboard session.")
 
 
 @app.post("/omi/conversation", tags=["Omi"])
@@ -1534,17 +1585,29 @@ def list_recent_memories(
         )
 
 
+@app.post("/dashboard/session", response_model=DashboardSessionResponse, tags=["Dashboard"])
+def create_dashboard_session(request: DashboardSessionRequest):
+    """Issues a short-lived token for dashboard memory deletion without exposing server secrets."""
+    expected_password, _ = _dashboard_auth_config()
+    if not hmac.compare_digest(request.password, expected_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect dashboard password.")
+
+    expires_at = str(int(time.time()) + DASHBOARD_SESSION_TTL_SECONDS)
+    signature = _dashboard_token_signature(expires_at, _dashboard_auth_config()[1])
+    return DashboardSessionResponse(
+        access_token=f"{expires_at}.{signature}",
+        expires_in=DASHBOARD_SESSION_TTL_SECONDS,
+    )
+
+
 @app.delete("/memories/{memory_id}", response_model=MemoryDeleteResponse, tags=["Memories"])
 def delete_memory(memory_id: str, req: Request):
     """
     Deletes a specific memory from Qdrant by its point ID.
     Enforces strict user identity ownership (caller can only delete their own records).
-    In production, mutations require valid MEMORA_ADMIN_KEY authorization.
+    Deletion requires a short-lived dashboard session and verifies record ownership.
     """
-    verify_admin_access(
-        auth_header=req.headers.get("authorization"),
-        admin_key=req.headers.get("x-admin-key"),
-    )
+    verify_dashboard_session(req.headers.get("authorization"))
 
     clean_id = (memory_id or "").strip()
     if not clean_id:
@@ -1721,6 +1784,7 @@ RESERVED_API_PREFIXES = (
     "redoc",
     "openapi.json",
     "api",
+    "dashboard",
 )
 
 
