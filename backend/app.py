@@ -1011,7 +1011,7 @@ def on_conversation(
                 "processed_at": datetime.now(timezone.utc).isoformat(),
                 "event_status": "pending",
             }
-            if len(_processed_omi_events > _MAX_PROCESSED_EVENTS:
+            if len(_processed_omi_events) > _MAX_PROCESSED_EVENTS:
                 oldest_key = next(iter(_processed_omi_events))
                 del _processed_omi_events[oldest_key]
 
@@ -1118,16 +1118,13 @@ def on_conversation(
             )
             logger.info(f"[Omi Webhook] Successfully stored conversation memory for uid='{effective_uid}' ({len(text)} chars)")
         except Exception as store_err:
-            logger.error(f"[Omi Webhook] Direct store_memory failed, queueing background task: {store_err}")
+            logger.error(f"[Omi Webhook] Memory persistence failed; allowing Omi to retry: {type(store_err).__name__}")
             if conversation_id:
                 with _events_lock:
-                    _processed_omi_events[dedup_key]["event_status"] = "failed"
-            background_tasks.add_task(
-                store_memory,
-                text=text,
-                uid=effective_uid,
-                source="conversation",
-                metadata=metadata,
+                    _processed_omi_events.pop(dedup_key, None)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Memory persistence failed; retry the webhook.",
             )
     else:
         logger.warning(f"[Omi Webhook] No non-empty text found in conversation payload for uid='{effective_uid}'")
